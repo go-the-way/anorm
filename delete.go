@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,49 +9,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
+	"database/sql"
 	"github.com/go-the-way/sg"
 )
 
-type ormDelete struct {
+type _Delete struct {
 	orm    *orm
 	wheres []sg.Ge
 }
 
-func (o *ormDelete) NotIfWhere(cond bool, wheres ...sg.Ge) *ormDelete {
-	return o.IfWhere(!cond, wheres...)
+func newDelete(o *orm) *_Delete {
+	return &_Delete{orm: o, wheres: make([]sg.Ge, 0)}
 }
 
-func (o *ormDelete) IfWhere(cond bool, wheres ...sg.Ge) *ormDelete {
+func (o *_Delete) IfWhere(cond bool, wheres ...sg.Ge) *_Delete {
 	if cond {
 		return o.Where(wheres...)
 	}
 	return o
 }
 
-func (o *ormDelete) Where(wheres ...sg.Ge) *ormDelete {
+func (o *_Delete) Where(wheres ...sg.Ge) *_Delete {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
-func (o *ormDelete) appendWhereGes(model Model) {
+func (o *_Delete) appendWhereGes(model Model) {
 	o.wheres = append(o.wheres, o.orm.getWhereGes(model)...)
 }
 
-func (o *ormDelete) getDeleteBuilder(model Model) (string, []interface{}) {
+func (o *_Delete) getDeleteBuilder(model Model) (string, []interface{}) {
 	o.appendWhereGes(model)
 	builder := sg.DeleteBuilder()
 	return builder.Where(sg.AndGroup(o.wheres...)).From(o.orm.table()).Build()
 }
 
-func (o *ormDelete) Remove(model Model) error {
+func (o *_Delete) Exec(model Model) (int64, error) {
+	var (
+		result sql.Result
+		err    error
+	)
 	sqlStr, ps := o.getDeleteBuilder(model)
-	debug("Remove[sql:%v ps:%v]", sqlStr, ps)
+	debug("delete.Exec[sql:%v ps:%v]", sqlStr, ps)
 	execDeleteHookersBefore(model, &sqlStr, &ps)
-	etr := newExecutorFromOrm(o.orm)
-	_, err := etr.exec(sqlStr, ps...)
+	if o.orm.openTx {
+		result, err = o.orm.tx.Exec(sqlStr, ps...)
+	} else {
+		result, err = o.orm.db.Exec(sqlStr, ps...)
+	}
 	execDeleteHookersAfter(model, sqlStr, ps, err)
-	return err
+	ra := int64(0)
+	if result != nil {
+		ra, _ = result.RowsAffected()
+	}
+	return ra, err
 }

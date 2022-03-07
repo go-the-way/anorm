@@ -1,4 +1,4 @@
-# anox
+# anorm
 
 ```
  _____  ____    ___    ___    ____  ____  
@@ -6,7 +6,7 @@
 / ___ || | | || |_| || |_| || |    | | | |
 \_____||_| |_| \___/  \___/ |_|    |_|_|_|
 
-::anox:: 
+::anorm:: 
 
 An another ORM framework implementation using the new way for Go.
 
@@ -14,16 +14,16 @@ An another ORM framework implementation using the new way for Go.
 
 {{ Powered by go-the-way }}
 
-{{ https://github.com/go-the-way/anox }}
+{{ https://github.com/go-the-way/anorm }}
 
 ```
 
-[![CircleCI](https://circleci.com/gh/go-the-way/anox/tree/main.svg?style=shield)](https://circleci.com/gh/go-the-way/anox/tree/main)
-[![codecov](https://codecov.io/gh/go-the-way/anox/branch/main/graph/badge.svg?token=8MAR3J959H)](https://codecov.io/gh/go-the-way/anox)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/anox)](https://goreportcard.com/report/github.com/go-the-way/anox)
-[![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anox?status.svg)](https://pkg.go.dev/github.com/go-the-way/anox?tab=doc)
-[![Release](https://img.shields.io/github/release/go-the-way/anox.svg?style=flat-square)](https://github.com/go-the-way/anox/releases)
-[![License](https://img.shields.io/github/license/go-the-way/anox)](https://raw.githubusercontent.com/go-the-way/anox/main/LICENSE)
+[![CircleCI](https://circleci.com/gh/go-the-way/anorm/tree/main.svg?style=shield)](https://circleci.com/gh/go-the-way/anorm/tree/main)
+[![codecov](https://codecov.io/gh/go-the-way/anorm/branch/main/graph/badge.svg?token=8MAR3J959H)](https://codecov.io/gh/go-the-way/anorm)
+[![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/anorm)](https://goreportcard.com/report/github.com/go-the-way/anorm)
+[![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)
+[![Release](https://img.shields.io/github/release/go-the-way/anorm.svg?style=flat-square)](https://github.com/go-the-way/anorm/releases)
+[![License](https://img.shields.io/github/license/go-the-way/anorm)](https://raw.githubusercontent.com/go-the-way/anorm/main/LICENSE)
 
 ### Quickstart
 ```go
@@ -34,7 +34,7 @@ import (
   "fmt"
   
   _ "github.com/go-sql-driver/mysql"
-  "github.com/go-the-way/anox"
+  "github.com/go-the-way/anorm"
   "github.com/go-the-way/sg"
 )
 
@@ -82,5 +82,20 @@ func main() {
 
 ```
 
-# Docs
-- [wiki](https://github.com/go-the-way/anox/wikis)
+### ORM Struct Tag
+
+| TagName | PropertyName | Description            | Default      | Example                                              |
+|---------|--------------|------------------------|--------------|------------------------------------------------------|
+| pk      | PK           | Table primary key      | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
+| ig      | InsertIgnore | Ignore when inserts    | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
+| ug      | UpdateIgnore | Ignore when updates    | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
+| c       | Column       | Struct property column | propertyName | c{id},c{hello_world},c{halo_1234},c{WorldHa}         |
+| def     | Definition   | Column definition SQL  |              | def{address varchar(100) not null comment 'Address'} |
+
+
+```
+Address    string `orm:"pk{F} c{address} def{address varchar(100) not null comment 'Address'}"`
+```
+
+### Docs
+- [wiki](https://github.com/go-the-way/anorm/wikis)

@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"errors"
@@ -20,11 +20,11 @@ import (
 )
 
 var (
-	errRequiredDS             = errors.New("required a DS, please call anox.DS or anox.DSWithName to set")
-	errRequiredMasterDS       = errors.New("required a master DS, please set named `master` or `_` DS")
-	errCannotRegisterNilModel = errors.New("can not register a not nil model")
-	errModelMetadataNil       = errors.New("model's metadata is nil")
-	errDuplicateRegisterModel = errors.New("duplicate register model")
+	errRequiredDS             = errors.New("anorm: required a DS, please call anorm.DS or anorm.DSWithName to set")
+	errRequiredMasterDS       = errors.New("anorm: required a master DS, please set named `master` or `_` DS")
+	errCannotRegisterNilModel = errors.New("anorm: can not register a not nil model")
+	errModelMetadataNil       = errors.New("anorm: model's metadata is nil")
+	errDuplicateRegisterModel = errors.New("anorm: duplicate register model")
 
 	// K<ModelPKGName> V<TableName>
 	modelTableMap = make(map[string]string)
@@ -92,7 +92,7 @@ func (t *tag) String() string {
 	return fmt.Sprintf("{PK:%v, Column:%s, InsertIgnore:%v, UpdateIgnore:%v, Definition:%s}", t.PK, t.Column, t.InsertIgnore, t.UpdateIgnore, t.Definition)
 }
 
-// Register defines register a Model struct for anox
+// Register defines register a Model struct for anorm
 func Register(model Model) {
 	if model == nil {
 		panic(errCannotRegisterNilModel)

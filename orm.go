@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,13 +9,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-the-way/sg"
@@ -26,44 +27,33 @@ var (
 	errModelNotYetRegisterFunc = func(model Model) error {
 		return errors.New(fmt.Sprintf("model [%v] not yet register", getModelPkgName(model)))
 	}
+	errTxNotOpen = errors.New("anorm: Tx not open")
 )
 
 type orm struct {
-	model      Model
-	tagMap     map[string]*tag
-	db         *sql.DB
-	tx         *sql.Tx
-	openTX     bool
-	autoCommit bool
+	mux    *sync.Mutex
+	model  Model
+	tagMap map[string]*tag
+	db     *sql.DB
+	tx     *sql.Tx
+	openTx bool
 }
 
 // New defines return a new orm from Model model
 func New(model Model) *orm {
-	return NewWithDS(model, ifEmpty(model.MetaData().DS, "_"), false, false)
-}
-
-func NewWithTx(model Model, autoCommit bool) *orm {
-	return NewWithDS(model, ifEmpty(model.MetaData().DS, "_"), true, autoCommit)
+	return NewWithDS(model, ifEmpty(model.MetaData().DS, "_"))
 }
 
 // NewWithDS defines return a new orm using named DS from Model model
-func NewWithDS(model Model, ds string, openTx, autoCommit bool) *orm {
+func NewWithDS(model Model, ds string) *orm {
 	if model == nil {
 		panic(errModelIsNil)
 	}
 
 	o := &orm{
-		model:      model,
-		db:         dsMap.required(ds),
-		autoCommit: autoCommit,
-	}
-
-	if openTx {
-		if tx, err := o.db.Begin(); err != nil {
-			panic(err)
-		} else {
-			o.tx = tx
-		}
+		mux:   &sync.Mutex{},
+		model: model,
+		db:    dsMap.required(ds),
 	}
 
 	debug("Model[%v] use DS[%v]", getModelPkgName(model), ds)
@@ -201,37 +191,60 @@ func (o *orm) getWhereGes(model Model) []sg.Ge {
 	return ges
 }
 
-// Select defines return a ormSelect
-func (o *orm) Select(columns ...sg.Ge) *ormSelect {
-	return &ormSelect{
-		orm:      o,
-		columns:  columns,
-		wheres:   make([]sg.Ge, 0),
-		orderBys: make([]sg.Ge, 0),
+// Select defines return *_Select
+func (o *orm) Select() *_Select {
+	return newSelect(o)
+}
+
+// SelectCount defines return *_SelectCount
+func (o *orm) SelectCount() *_SelectCount {
+	return newSelectCount(o)
+}
+
+// Insert defines return *_Insert
+func (o *orm) Insert() *_Insert {
+	return newInsert(o)
+}
+
+// Update defines return *_Update
+func (o *orm) Update() *_Update {
+	return newUpdate(o)
+}
+
+// Delete defines return *_Delete
+func (o *orm) Delete() *_Delete {
+	return newDelete(o)
+}
+
+// Begin a Tx
+func (o *orm) Begin() error {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	if tx, err := o.db.Begin(); err != nil {
+		return err
+	} else {
+		o.openTx = true
+		o.tx = tx
+		return nil
 	}
 }
 
-// Insert defines return a ormInsert
-func (o *orm) Insert() *ormInsert {
-	return &ormInsert{
-		orm:           o,
-		ignoreColumns: make([]sg.C, 0),
+// Commit the Tx
+func (o *orm) Commit() error {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	if !o.openTx {
+		return errTxNotOpen
 	}
+	return o.tx.Commit()
 }
 
-// Update defines return a ormUpdate
-func (o *orm) Update() *ormUpdate {
-	return &ormUpdate{
-		orm:           o,
-		ignoreColumns: make([]sg.C, 0),
-		wheres:        make([]sg.Ge, 0),
+// Rollback the Tx
+func (o *orm) Rollback() error {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+	if !o.openTx {
+		return errTxNotOpen
 	}
-}
-
-// Delete defines return a ormDelete
-func (o *orm) Delete() *ormDelete {
-	return &ormDelete{
-		orm:    o,
-		wheres: make([]sg.Ge, 0),
-	}
+	return o.tx.Rollback()
 }

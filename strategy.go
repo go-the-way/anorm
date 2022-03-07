@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,13 +9,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 const (
 	// Default defines default not changed
 	// Model:User  => Table:User
 	// Field:UserName  => Column:UserName
-	Default Strategy = 1 + iota
+	Default Strategy = iota
 	// Underline defines to transform a underline style name
 	// Model:UserModel => Table:user_model
 	// Field:UserName => Column:user_name

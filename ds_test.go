@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"reflect"
@@ -19,7 +19,7 @@ import (
 func TestNilDS(t *testing.T) {
 	defer func() {
 		if re := recover(); re != nil && reflect.DeepEqual(re, errDSIsNil) {
-			t.Log("test ok!!!")
+			t.Log("test ok")
 		}
 	}()
 	DS(nil)
@@ -28,24 +28,24 @@ func TestNilDS(t *testing.T) {
 func TestDS(t *testing.T) {
 	DS(testDB)
 	if !reflect.DeepEqual(dsMap["_"], testDB) {
-		t.Error("call DS, expect have a key `_` DS in dsMap")
+		t.Fatal("call DS, expect have a key `_` DS in dsMap")
 	}
 	if !reflect.DeepEqual(dsMap["master"], testDB) {
-		t.Error("call DS, expect have a key `master` DS in dsMap")
+		t.Fatal("call DS, expect have a key `master` DS in dsMap")
 	}
 }
 
 func TestDSWithName(t *testing.T) {
 	DSWithName("secondary", testDB)
 	if !reflect.DeepEqual(dsMap["secondary"], testDB) {
-		t.Error("call DSWithName, expect have a key `secondary` DS in dsMap")
+		t.Fatal("call DSWithName, expect have a key `secondary` DS in dsMap")
 	}
 }
 
 func TestDSRequired(t *testing.T) {
 	defer func() {
 		if re := recover(); re != nil && reflect.DeepEqual(re, errRequiredNamedDSFunc("hello")) {
-			t.Logf("test ok!!!!")
+			t.Logf("test ok")
 		}
 	}()
 	dsMap.required("hello")

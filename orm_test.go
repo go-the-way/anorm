@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"testing"
@@ -18,6 +18,60 @@ import (
 func TestNew(t *testing.T) {
 	o := New(new(userModel))
 	if o == nil {
-		t.Error("call New() expect get a new orm")
+		t.Fatal("TestNew failed!")
+	}
+}
+
+func TestNewWithDS(t *testing.T) {
+	o := NewWithDS(new(userModel), "_")
+	if o == nil {
+		t.Fatal("TestNewWithDS failed!")
+	}
+	if o.db == nil {
+		t.Fatal("TestNewWithDS failed!")
+	}
+}
+
+func TestOrm_Begin(t *testing.T) {
+	o := New(new(userModel))
+	if err := o.Begin(); err != nil {
+		t.Fatalf("TestOrm_Begin failed: %v\n", err)
+	}
+	if !o.openTx || o.tx == nil {
+		t.Fatal("TestOrm_Begin failed!")
+	}
+}
+
+func TestOrm_Commit(t *testing.T) {
+	o := New(new(userModel))
+	if err := o.Begin(); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	truncateTestTable()
+	if err := o.Insert().Exec(getTest()); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	if err := o.Commit(); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	if c := selectUserModelCount(); c == 0 {
+		t.Fatal("TestOrm_Commit failed!")
+	}
+}
+
+func TestOrm_Rollback(t *testing.T) {
+	o := New(new(userModel))
+	if err := o.Begin(); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	truncateTestTable()
+	if err := o.Insert().Exec(getTest()); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	if err := o.Rollback(); err != nil {
+		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+	}
+	if c := selectUserModelCount(); c != 0 {
+		t.Fatal("TestOrm_Commit failed!")
 	}
 }

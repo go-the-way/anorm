@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,10 +9,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
-	"github.com/go-the-way/sg"
 	"testing"
 )
 
@@ -20,20 +19,98 @@ func init() {
 	testInit()
 }
 
-func TestDeleteRemove(t *testing.T) {
+func TestDeleteExec(t *testing.T) {
 	truncateTestTable()
 	o := New(new(userModel))
-	if err := insertUserModel("coco", 8, "hubei~wuhan", "13911112222"); err != nil {
-		t.Errorf("prepare insert failed: %v\n", err)
+	{
+		if err := insertTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelCount() != 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
 	}
-	if err := o.Delete().
-		Where(sg.Eq("id", 1)).
-		IfWhere(true, sg.Eq("name", "coco")).
-		NotIfWhere(false, sg.Eq("age", 8)).
-		Remove(&userModel{Phone: "13911112222"}); err != nil {
-		t.Errorf("delete failed: %v\n", err)
+	{
+		if err := insertTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().Where(getTestGes()...).Exec(nil); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelCount() != 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
 	}
-	if selectUserModelCount(1) > 0 {
-		t.Error("test failed!")
+	{
+		if err := insertTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().Exec(getTest()); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelCount() != 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
+	}
+}
+
+func TestDeleteExec2(t *testing.T) {
+	truncateTestNullTable()
+	o := New(new(userModelNull))
+	{
+		if err := insertNullTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelNullCount() > 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
+	}
+	{
+		if err := insertNullTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().Where(getTestGes()...).Exec(nil); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelNullCount() > 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
+	}
+	{
+		if err := insertNullTest(); err != nil {
+			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
+		}
+		if _, err := o.Delete().Exec(getNullTest()); err != nil {
+			t.Fatalf("TestDeleteExec failed: %v\n", err)
+		}
+		if selectUserModelNullCount() > 0 {
+			t.Fatal("TestDeleteExec failed!")
+		}
+	}
+}
+
+func TestDeleteExecTX(t *testing.T) {
+	truncateTestTable()
+	o := New(new(userModel))
+	if err := insertTest(); err != nil {
+		t.Fatalf("TestDeleteExecTX prepare insert failed: %v\n", err)
+	}
+	if err := o.Begin(); err != nil {
+		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
+	}
+	if _, err := o.Delete().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
+	}
+	if err := o.Commit(); err != nil {
+		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
+	}
+	if selectUserModelCount() != 0 {
+		t.Fatalf("TestDeleteExecTX failed!")
 	}
 }

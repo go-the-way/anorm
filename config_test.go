@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,21 +9,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestSetNilConfig(t *testing.T) {
 	defer func() {
 		if re := recover(); re != nil {
 			if !reflect.DeepEqual(re, errInvalidSetConfig) {
-				t.Error(`when set nil to SetConfig, expect get errInvalidSetConfig`)
+				t.Fatal(`when set nil to SetConfig, expect get errInvalidSetConfig`)
 			}
 		}
 	}()
@@ -34,7 +32,7 @@ func TestSetDefaultConfig(t *testing.T) {
 	c := &Config{}
 	SetConfig(c)
 	if !reflect.DeepEqual(c, Configuration) {
-		t.Error(`when set c to SetConfig, expect get c`)
+		t.Fatal(`when set c to SetConfig, expect get c`)
 	}
 }
 
@@ -42,37 +40,38 @@ func TestDefaultConfig(t *testing.T) {
 	cc := &Config{Migrate: false}
 	SetConfig(cc)
 	if !reflect.DeepEqual(cc, Configuration) {
-		t.Error(`when set cc to SetConfig, expect get cc`)
+		t.Fatal(`when set cc to SetConfig, expect get cc`)
 	}
 }
 
-type _execHooker struct{ int }
+type _ExecHooker struct{ int }
 
-func (a *_execHooker) BeforeExec(_ Model, _ *string, _ *[]interface{}) {
+func (a *_ExecHooker) BeforeExec(_ Model, _ *string, _ *[]interface{}) {
 	a.int += 2
 }
 
-func (a *_execHooker) AfterExec(_ Model, _ string, _ []interface{}, _ error) {
+func (a *_ExecHooker) AfterExec(_ Model, _ string, _ []interface{}, _ error) {
 	a.int--
 }
 
-func TestExecHooker(t *testing.T) {
-	h1 := _execHooker{}
-	h2 := _execHooker{}
-	h3 := _execHooker{}
-	h4 := _execHooker{}
+func TestExecHook(t *testing.T) {
+	h1 := _ExecHooker{}
+	h2 := _ExecHooker{}
+	h3 := _ExecHooker{}
+	h4 := _ExecHooker{}
 	Configuration.InsertHookers = append(Configuration.InsertHookers, &h1)
 	Configuration.UpdateHookers = append(Configuration.UpdateHookers, &h2)
 	Configuration.DeleteHookers = append(Configuration.DeleteHookers, &h3)
 	Configuration.SelectHookers = append(Configuration.SelectHookers, &h4)
 	_m := userModel{0, "", 0, "", "", time.Time{}}
-	_ = New(new(userModel)).Insert().Save(&_m)
-	_ = New(new(userModel)).Update().Modify(&_m)
-	_ = New(new(userModel)).Delete().Remove(&_m)
-	_, _ = New(new(userModel)).Select().First(&_m)
-
-	require.Equal(t, 1, h1.int)
-	require.Equal(t, 1, h2.int)
-	require.Equal(t, 1, h3.int)
-	require.Equal(t, 1, h4.int)
+	_ = New(new(userModel)).Insert().Exec(&_m)
+	_, _ = New(new(userModel)).Update().Exec(&_m)
+	_, _ = New(new(userModel)).Delete().Exec(&_m)
+	_, _ = New(new(userModel)).Select().Exec(&_m)
+	if !(reflect.DeepEqual(1, h1.int) &&
+		reflect.DeepEqual(1, h2.int) &&
+		reflect.DeepEqual(1, h3.int) &&
+		reflect.DeepEqual(1, h4.int)) {
+		t.Fatal("TestExecHooker failed!")
+	}
 }

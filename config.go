@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 import (
 	"errors"
@@ -18,13 +18,13 @@ import (
 )
 
 var (
-	errInvalidSetConfig = errors.New(`invalid config set of nil`)
+	errInvalidSetConfig = errors.New(`anorm: invalid config set of nil`)
 
 	Configuration = &Config{
 		Migrate:            false,
 		TableNameStrategy:  Underline,
 		ColumnNameStrategy: Underline,
-		Logger:             log.New(os.Stdout, "[anox] ", log.LstdFlags),
+		Logger:             log.New(os.Stdout, "[anorm] ", log.LstdFlags),
 		InsertHookers:      make([]ExecHooker, 0),
 		DeleteHookers:      make([]ExecHooker, 0),
 		UpdateHookers:      make([]ExecHooker, 0),
@@ -40,7 +40,7 @@ type Config struct {
 	TableNameStrategy Strategy
 	// TableNameStrategy defines binding table's column name for Model's Fields
 	ColumnNameStrategy Strategy
-	// Logger defines logger for anox
+	// Logger defines logger for anorm
 	Logger *log.Logger
 	// Logger Debug
 	Debug         bool
@@ -50,7 +50,7 @@ type Config struct {
 	SelectHookers []ExecHooker
 }
 
-// SetConfig define Set configuration for anox
+// SetConfig define Set configuration for anorm
 func SetConfig(config *Config) {
 	if config == nil {
 		panic(errInvalidSetConfig)

@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,14 +9,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anox
+package anorm
 
 var (
 	MySQLPagination = &mysqlPagination{}
 )
 
 type (
-	// Pagination defines Pagination plugin
+	// Pagination plugin interface
 	Pagination interface {
 		Page(originalSql string, offset, size int) (string, []interface{})
 	}

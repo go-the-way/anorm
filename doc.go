@@ -1,4 +1,4 @@
-// Copyright 2022 anox Author. All Rights Reserved.
+// Copyright 2022 anorm Author. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package anox
+// Package anorm
 /*
 
 An another ORM framework implementation using the new way for Go.
@@ -21,7 +21,7 @@ package main
 import (
   "database/sql"
   "fmt"
-  . "github.com/go-the-way/anox"
+  . "github.com/go-the-way/anorm"
   "github.com/go-the-way/sg"
 )
 
@@ -35,13 +35,13 @@ var (
 )
 
 type userModel struct {
-  ID         int    `orm:"pk{T} column{id} insertIgnore{T} definition{id int not null auto_increment comment 'ID'}"`
-  Name       string `orm:"pk{F} column{name} definition{name varchar(50) not null default 'hello world' comment 'Name'}"`
-  Age        int    `orm:"pk{F} column{age} definition{age int not null default '20' comment 'Age'}"`
-  Address    string `orm:"pk{F} column{address} definition{address varchar(100) not null comment 'Address'}"`
-  Phone      string `orm:"pk{F} column{phone} definition{phone varchar(11) not null default '13900000000' comment 'Phone'}"`
-  CreateTime string `orm:"pk{F} column{create_time} insertIgnore{T} updateIgnore{T} definition{create_time datetime not null default current_timestamp comment 'CreateTime'}"`
-  XYZ        string `orm:"pk{F} column{xyz} definition{xyz varchar(50) not null default 'xyz' comment 'XYZ'}"`
+  ID         int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+  Name       string `orm:"pk{F} c{name} def{name varchar(50) not null default 'hello world' comment 'Name'}"`
+  Age        int    `orm:"pk{F} c{age} def{age int not null default '20' comment 'Age'}"`
+  Address    string `orm:"pk{F} c{address} def{address varchar(100) not null comment 'Address'}"`
+  Phone      string `orm:"pk{F} c{phone} def{phone varchar(11) not null default '13900000000' comment 'Phone'}"`
+  CreateTime string `orm:"pk{F} c{create_time} ig{T} ug{T} def{create_time datetime not null default current_timestamp comment 'CreateTime'}"`
+  XYZ        string `orm:"pk{F} c{xyz} def{xyz varchar(50) not null default 'xyz' comment 'XYZ'}"`
 }
 
 func (u *userModel) MetaData() *ModelMeta {
@@ -67,5 +67,4 @@ func main() {
   }
 }
 */
-
-package anox
+package anorm

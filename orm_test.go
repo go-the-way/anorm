@@ -32,46 +32,29 @@ func TestNewWithDS(t *testing.T) {
 	}
 }
 
-func TestOrm_Begin(t *testing.T) {
+func TestOrmBegin(t *testing.T) {
 	o := New(new(userModel))
 	if err := o.Begin(); err != nil {
-		t.Fatalf("TestOrm_Begin failed: %v\n", err)
+		t.Fatalf("TestOrmBegin failed: %v\n", err)
 	}
 	if !o.openTx || o.tx == nil {
-		t.Fatal("TestOrm_Begin failed!")
+		t.Fatal("TestOrmBegin failed!")
 	}
 }
 
-func TestOrm_Commit(t *testing.T) {
+func TestOrmRollback(t *testing.T) {
 	o := New(new(userModel))
 	if err := o.Begin(); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+		t.Fatalf("TestOrmRollback failed: %v\n", err)
 	}
 	truncateTestTable()
 	if err := o.Insert().Exec(getTest()); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+		t.Fatalf("TestOrmRollback failed: %v\n", err)
 	}
 	if err := o.Commit(); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
+		t.Fatalf("TestOrmRollback failed: %v\n", err)
 	}
 	if c := selectUserModelCount(); c == 0 {
-		t.Fatal("TestOrm_Commit failed!")
-	}
-}
-
-func TestOrm_Rollback(t *testing.T) {
-	o := New(new(userModel))
-	if err := o.Begin(); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
-	}
-	truncateTestTable()
-	if err := o.Insert().Exec(getTest()); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
-	}
-	if err := o.Rollback(); err != nil {
-		t.Fatalf("TestOrm_Commit failed: %v\n", err)
-	}
-	if c := selectUserModelCount(); c != 0 {
-		t.Fatal("TestOrm_Commit failed!")
+		t.Fatal("TestOrmRollback failed!")
 	}
 }

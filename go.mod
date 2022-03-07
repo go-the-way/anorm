@@ -1,6 +1,6 @@
 module github.com/go-the-way/anorm
 
-go 1.16
+go 1.17
 
 require (
 	github.com/billcoding/reflectx v0.0.0-20211015032602-919530ff1c45

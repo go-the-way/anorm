@@ -23,7 +23,6 @@ An another ORM framework implementation using the new way for Go.
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/anorm)](https://goreportcard.com/report/github.com/go-the-way/anorm)
 [![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)
 [![Release](https://img.shields.io/github/release/go-the-way/anorm.svg?style=flat-square)](https://github.com/go-the-way/anorm/releases)
-[![License](https://img.shields.io/github/license/go-the-way/anorm)](https://raw.githubusercontent.com/go-the-way/anorm/main/LICENSE)
 
 ### Quickstart
 ```go

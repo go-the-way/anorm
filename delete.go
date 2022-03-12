@@ -53,8 +53,10 @@ func (o *_Delete) Exec(model Model) (int64, error) {
 		err    error
 	)
 	sqlStr, ps := o.getDeleteBuilder(model)
-	debug("delete.Exec[sql:%v ps:%v]", sqlStr, ps)
 	execDeleteHookersBefore(model, &sqlStr, &ps)
+	if debug() {
+		(&execLog{"Delete.Exec", sqlStr, ps}).Log()
+	}
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {

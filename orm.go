@@ -56,7 +56,7 @@ func NewWithDS(model Model, ds string) *orm {
 		db:    dsMap.required(ds),
 	}
 
-	debug("Model[%v] use DS[%v]", getModelPkgName(model), ds)
+	debugLog("Model[%v] use DS[%v]", getModelPkgName(model), ds)
 
 	if tagMap, registered := modelTagMap[getModelPkgName(model)]; !registered {
 		panic(errModelNotYetRegisterFunc(model))

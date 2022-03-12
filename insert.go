@@ -83,14 +83,19 @@ func (o *_Insert) Exec(model Model) error {
 		err    error
 	)
 	sqlStr, ps := o.getInsertBuilder(model)
-	debug("insert.Exec[sql:%v ps:%v]", sqlStr, ps)
 	execInsertHookersBefore(model, &sqlStr, &ps)
+	if debug() {
+		(&execLog{"Insert.Exec", sqlStr, ps}).Log()
+	}
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
 	execInsertHookersAfter(model, sqlStr, ps, err)
+	if err != nil {
+		return err
+	}
 	lastInsertId := int64(0)
 	if result != nil {
 		lastInsertId, _ = result.LastInsertId()
@@ -134,7 +139,9 @@ func (o *_Insert) ExecBatch(models ...Model) (int64, error) {
 		err    error
 	)
 	sqlStr, ps := o.getInsertBuilder(models...)
-	debug("insert.ExecBatch[sql:%v ps:%v]", sqlStr, ps)
+	if debug() {
+		(&execLog{"Insert.ExecBatch", sqlStr, ps}).Log()
+	}
 	execInsertHookersBefore(models[0], &sqlStr, &ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)

@@ -109,8 +109,10 @@ func (o *_Update) Exec(model Model) (int64, error) {
 		err    error
 	)
 	sqlStr, ps := o.getUpdateBuilder(model)
-	debug("update.Exec[sql:%v ps:%v]", sqlStr, ps)
 	execUpdateHookersBefore(model, &sqlStr, &ps)
+	if debug() {
+		(&execLog{"Update.Exec", sqlStr, ps}).Log()
+	}
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {

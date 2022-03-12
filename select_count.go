@@ -51,8 +51,10 @@ func (o *_SelectCount) Exec(model Model) (int64, error) {
 		From(o.getTableName()).
 		Where(sg.AndGroup(o.wheres...)).
 		Build()
-	debug("selectCount.Exec[sql:%v ps:%v]", sqlStr, ps)
 	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
+	if debug() {
+		(&execLog{"SelectCount.Exec", sqlStr, ps}).Log()
+	}
 	row := o.orm.db.QueryRow(sqlStr, ps...)
 	execSelectHookersAfter(model, sqlStr, ps, row.Err())
 	if err := row.Err(); err != nil {

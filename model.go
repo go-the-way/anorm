@@ -17,6 +17,7 @@ import (
 	"github.com/billcoding/reflectx"
 	"github.com/go-the-way/sg"
 	"reflect"
+	"strings"
 )
 
 var (
@@ -42,6 +43,8 @@ var (
 	modelInsertIgnoreMap = make(map[string]map[string]struct{})
 	// K<ModelPKGName> V< K<Column> V<> >
 	modelUpdateIgnoreMap = make(map[string]map[string]struct{})
+	// K<ModelPKGName> V< K<Field> V<> >
+	modelJoinRefMap = make(map[string]map[string]*JoinRef)
 	// K<ModelPKGName> V<[]PKColumn>
 	modelPKMap = make(map[string][]string, 0)
 )
@@ -77,6 +80,8 @@ type (
 		InsertIgnores []sg.C
 		// UpdateIgnores defines Table update ignore columns
 		UpdateIgnores []sg.C
+		// JoinRefMap defines Table join rel table
+		JoinRefMap map[string]*JoinRef
 	}
 
 	tag struct {
@@ -85,11 +90,21 @@ type (
 		InsertIgnore bool   `alias:"ig"`
 		UpdateIgnore bool   `alias:"ug"`
 		Definition   string `alias:"def"`
+		Join         string `alias:"join"` // join{type,self_column,join_table,join_column}
+	}
+
+	JoinRef struct {
+		Field      string // SelfID
+		Type       string // left,right,inner,...
+		SelfColumn string // self_id
+		RelTable   string // rel_table
+		RelID      string // rel_id
+		RelName    string // rel_name
 	}
 )
 
 func (t *tag) String() string {
-	return fmt.Sprintf("{PK:%v, Column:%s, InsertIgnore:%v, UpdateIgnore:%v, Definition:%s}", t.PK, t.Column, t.InsertIgnore, t.UpdateIgnore, t.Definition)
+	return fmt.Sprintf("{PK:%v, Column:%s, InsertIgnore:%v, UpdateIgnore:%v, Definition:%s, Join:%s}", t.PK, t.Column, t.InsertIgnore, t.UpdateIgnore, t.Definition, t.Join)
 }
 
 // Register defines register a Model struct for anorm
@@ -110,6 +125,7 @@ func Register(model Model) {
 
 	insertIgnoreMap := make(map[string]struct{}, 0)
 	updateIgnoreMap := make(map[string]struct{}, 0)
+	joinRefMap := make(map[string]*JoinRef, 0)
 	tagMap := make(map[string]*tag, 0)
 	fields := make([]string, 0)
 	columns := make([]string, 0)
@@ -137,6 +153,7 @@ func Register(model Model) {
 			insertIgnore     bool
 			updateIgnore     bool
 			pk               bool
+			join             string
 		)
 		fieldName := structField.Name
 		if len(indexMap) > 0 {
@@ -150,7 +167,8 @@ func Register(model Model) {
 			insertIgnore = curTag.InsertIgnore
 			updateIgnore = curTag.UpdateIgnore
 			pk = curTag.PK
-			debug("parse model [%v] tag [%s]", reflect.TypeOf(model), curTag.String())
+			join = curTag.Join
+			debugLog("parse model [%v] tag [%s]", reflect.TypeOf(model), curTag.String())
 		}
 		if pk {
 			pks = append(pks, column)
@@ -166,34 +184,61 @@ func Register(model Model) {
 		if updateIgnore {
 			updateIgnoreMap[column] = struct{}{}
 		}
+		if join != "" {
+			//inner_join,self_id,rel_table,rel_id,rel_name
+			if joinPs := strings.Split(join, ","); len(joinPs) != 5 {
+				debugLog("parse model field [%s] join ref [%v] failed: valid like [inner,self_id,rel_table,rel_id,rel_id,rel_name]", reflect.TypeOf(model), fieldName)
+			} else {
+				joinType := strings.ToUpper(strings.TrimSpace(joinPs[0]))
+				selfColumn := strings.TrimSpace(joinPs[1])
+				relTable := strings.TrimSpace(joinPs[2])
+				relID := strings.TrimSpace(joinPs[3])
+				relName := strings.TrimSpace(joinPs[4])
+				jr := JoinRef{
+					Field:      fieldName,
+					Type:       joinType,
+					SelfColumn: selfColumn,
+					RelTable:   relTable,
+					RelID:      relID,
+					RelName:    relName,
+				}
+				joinRefMap[fieldName] = &jr
+			}
+		}
 		fields = append(fields, fieldName)
 		columns = append(columns, column)
 		columnFieldMap[column] = fieldName
 		fieldColumnMap[fieldName] = column
 	}
 
-	if cs := metaData.PrimaryKeyColumns; cs != nil {
-		for _, c := range cs {
-			pks = append(pks, string(c))
-			pkGes = append(pkGes, c)
+	if vs := metaData.PrimaryKeyColumns; vs != nil {
+		for _, v := range vs {
+			pks = append(pks, string(v))
+			pkGes = append(pkGes, v)
 		}
 	}
 
-	if cs := metaData.ColumnDefinitions; cs != nil {
-		for _, c := range cs {
-			columnGes = append(columnGes, c)
+	if vs := metaData.ColumnDefinitions; vs != nil {
+		for _, v := range vs {
+			columnGes = append(columnGes, v)
 		}
 	}
 
-	if cs := metaData.InsertIgnores; cs != nil {
-		for _, c := range cs {
-			insertIgnoreMap[string(c)] = struct{}{}
+	if vs := metaData.InsertIgnores; vs != nil {
+		for _, v := range vs {
+			insertIgnoreMap[string(v)] = struct{}{}
 		}
 	}
 
-	if cs := metaData.UpdateIgnores; cs != nil {
-		for _, c := range cs {
-			updateIgnoreMap[string(c)] = struct{}{}
+	if vs := metaData.UpdateIgnores; vs != nil {
+		for _, v := range vs {
+			updateIgnoreMap[string(v)] = struct{}{}
+		}
+	}
+
+	if vs := metaData.JoinRefMap; vs != nil {
+		for k, v := range vs {
+			joinRefMap[k] = v
 		}
 	}
 
@@ -206,6 +251,7 @@ func Register(model Model) {
 	modelColumnFieldMap[modelPkgName] = columnFieldMap
 	modelInsertIgnoreMap[modelPkgName] = insertIgnoreMap
 	modelUpdateIgnoreMap[modelPkgName] = updateIgnoreMap
+	modelJoinRefMap[modelPkgName] = joinRefMap
 	modelPKMap[modelPkgName] = pks
 
 	if !(Configuration.Migrate || metaData.Migrate) {
@@ -236,7 +282,7 @@ func Register(model Model) {
 	}
 
 	createSQL, _ := builder.Build()
-	debug("migrate model [%v] table [%v] create DDL [%v]", reflect.TypeOf(model), tableName, createSQL)
+	debugLog("migrate model [%v] table [%v] create DDL [%v]", reflect.TypeOf(model), tableName, createSQL)
 
 	_, err := masterDB.Exec(createSQL)
 	if err != nil {

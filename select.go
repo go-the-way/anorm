@@ -12,11 +12,13 @@
 package anorm
 
 import (
+	"fmt"
 	"github.com/go-the-way/sg"
 )
 
 type _Select struct {
 	orm      *orm
+	join     bool
 	columns  []sg.Ge
 	wheres   []sg.Ge
 	orderBys []sg.Ge
@@ -24,6 +26,11 @@ type _Select struct {
 
 func newSelect(o *orm) *_Select {
 	return &_Select{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
+}
+
+func (o *_Select) Join() *_Select {
+	o.join = true
+	return o
 }
 
 func (o *_Select) getColumns() []sg.Ge {
@@ -36,6 +43,7 @@ func (o *_Select) getColumns() []sg.Ge {
 	}
 	columnGes := make([]sg.Ge, 0)
 	columns := modelColumnMap[getModelPkgName(o.orm.model)]
+	joinRefs := modelJoinRefMap[getModelPkgName(o.orm.model)]
 	for _, c := range columns {
 		if len(cm) > 0 {
 			if _, have := cm[sg.C(c)]; !have {
@@ -43,9 +51,38 @@ func (o *_Select) getColumns() []sg.Ge {
 			}
 		}
 		fieldName := modelColumnFieldMap[getModelPkgName(o.orm.model)][c]
-		columnGes = append(columnGes, sg.Alias(sg.C(c), fieldName))
+		if joinRefs == nil || joinRefs[fieldName] == nil {
+			columnGes = append(columnGes, sg.Alias(sg.C("t."+c), fieldName))
+		}
 	}
 	return columnGes
+}
+
+func (o *_Select) getJoinRef() ([]sg.Ge, []sg.Ge) {
+	columnGes := make([]sg.Ge, 0)
+	joinGs := make([]sg.Ge, 0)
+	refCount := 1
+	if joinRefMap, have := modelJoinRefMap[getModelPkgName(o.orm.model)]; have && o.join {
+		// append join column
+		for k, v := range joinRefMap {
+			relAlias := fmt.Sprintf("rel%d", refCount)
+			// rel_table.rel_column AS RelColumn
+			columnGes = append(columnGes, sg.Alias(sg.C(relAlias+"."+v.RelName), k))
+			// LEFT JOIN rel_table ON rel_table.rel_id = t.self_id
+			joinGs = append(joinGs, sg.NewJoiner(
+				[]sg.Ge{sg.C(v.Type),
+					sg.C("JOIN"),
+					sg.Alias(sg.T(v.RelTable), relAlias),
+					sg.C("ON"),
+					sg.C(relAlias + "." + v.RelID),
+					sg.C("="),
+					sg.C("t." + v.SelfColumn)},
+				" ", "", "", false),
+			)
+			refCount++
+		}
+	}
+	return columnGes, joinGs
 }
 
 func (o *_Select) getTableName() sg.Ge {
@@ -75,13 +112,20 @@ func (o *_Select) appendWhereGes(model Model) {
 
 func (o *_Select) Exec(model Model) ([]Model, error) {
 	o.appendWhereGes(model)
-	sqlStr, ps := sg.SelectBuilder().
+	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
-		From(o.getTableName()).
+		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
-		OrderBy(o.orderBys...).
-		Build()
-	debug("List[sql:%v ps:%v]", sqlStr, ps)
+		OrderBy(o.orderBys...)
+	refColumns, refJoins := o.getJoinRef()
+	if len(refColumns) > 0 && len(refColumns) == len(refJoins) {
+		selectBuilder.Select(refColumns...)
+		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
+	}
+	sqlStr, ps := selectBuilder.Build()
+	if debug() {
+		(&execLog{"Select.Exec", sqlStr, ps}).Log()
+	}
 	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
 	rows, err := o.orm.db.Query(sqlStr, ps...)
 	execSelectHookersAfter(o.orm.model, sqlStr, ps, err)
@@ -92,35 +136,37 @@ func (o *_Select) Exec(model Model) ([]Model, error) {
 }
 
 func (o *_Select) ExecPage(model Model, pager Pagination, offset, size int) ([]Model, int64, error) {
-	if pager == nil {
-		panic("anorm: the pager is nil")
-	}
 	var err error
 	sc := o.orm.SelectCount()
 	sc.wheres = append(sc.wheres, o.wheres...)
 	c, err := sc.Exec(model)
-	debug("[ExecPage]count [%d]", c)
 	if err != nil {
 		return nil, 0, err
 	}
 	if c <= 0 {
 		return make([]Model, 0), 0, nil
 	}
-	sqlStr, ps := sg.SelectBuilder().
+	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
-		From(o.getTableName()).
+		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
-		OrderBy(o.orderBys...).
-		Build()
-	debug("[ExecPage]originalSql [%s] originalPs [%v]", sqlStr, ps)
+		OrderBy(o.orderBys...)
+	refColumns, refJoins := o.getJoinRef()
+	if len(refColumns) > 0 && len(refColumns) == len(refJoins) {
+		selectBuilder.Select(refColumns...)
+		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
+	}
+	sqlStr, ps := selectBuilder.Build()
 	sqlStr, pps := pager.Page(sqlStr, offset, size)
 	ps = append(ps, pps...)
-	debug("[ExecPage]currentSql [%s] currentPs [%v]", sqlStr, ps)
 	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
+	if debug() {
+		(&execLog{"Select.ExecPage", sqlStr, ps}).Log()
+	}
 	rows, err := o.orm.db.Query(sqlStr, ps...)
 	execSelectHookersAfter(o.orm.model, sqlStr, ps, err)
 	if err != nil {
-		return nil, 0, nil
+		return nil, 0, err
 	}
 	models, err := scanStruct(rows, o.orm.model)
 	return models, c, err

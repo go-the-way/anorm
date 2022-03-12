@@ -90,11 +90,4 @@ func main() {
 | ug      | UpdateIgnore | Ignore when updates    | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
 | c       | Column       | Struct property column | propertyName | c{id},c{hello_world},c{halo_1234},c{WorldHa}         |
 | def     | Definition   | Column definition SQL  |              | def{address varchar(100) not null comment 'Address'} |
-
-
-```
-Address    string `orm:"pk{F} c{address} def{address varchar(100) not null comment 'Address'}"`
-```
-
-### Docs
-- [wiki](https://github.com/go-the-way/anorm/wikis)
+| join    | JoinRef      | Join Ref definition    |              | join{inner,self_id,rel_table,rel_id,rel_name}        |

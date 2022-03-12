@@ -11,15 +11,38 @@
 
 package anorm
 
-func debug(str string, args ...interface{}) {
-	if Configuration.Logger != nil && Configuration.Debug {
-		Configuration.Logger.Printf(str, args...)
+import "sync"
+
+var logMu = &sync.Mutex{}
+
+type execLog struct {
+	callName string
+	sql      string
+	ps       []interface{}
+}
+
+func (el *execLog) Log() {
+	logMu.Lock()
+	defer logMu.Unlock()
+	Configuration.Logger.Printf("%s================================================>\n", el.callName)
+	Configuration.Logger.Printf("sql{%s}\n", el.sql)
+	Configuration.Logger.Printf("parameters{%v}\n", el.ps)
+	Configuration.Logger.Printf("<================================================%s\n", el.callName)
+}
+
+func debug() bool {
+	return Configuration.Logger != nil && Configuration.Debug
+}
+
+func debugLog(str string, ps ...interface{}) {
+	if debug() {
+		Configuration.Logger.Printf(str, ps...)
 	}
 }
 
 func handleErr(err error) {
-	if err != nil {
-		if Configuration.Logger != nil && Configuration.Debug {
+	if Configuration.Logger != nil && Configuration.Debug {
+		if err != nil {
 			Configuration.Logger.Fatalf("%v", err)
 		}
 	}

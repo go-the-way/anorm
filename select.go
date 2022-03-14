@@ -62,24 +62,31 @@ func (o *_Select) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	columnGes := make([]sg.Ge, 0)
 	joinGs := make([]sg.Ge, 0)
 	refCount := 1
+	refTableMap := make(map[string]string, 0)
 	if joinRefMap, have := modelJoinRefMap[getModelPkgName(o.orm.model)]; have && o.join {
 		// append join column
 		for k, v := range joinRefMap {
-			relAlias := fmt.Sprintf("rel%d", refCount)
+			relAlias, joined := refTableMap[v.RelTable]
+			if relAlias == "" {
+				relAlias = fmt.Sprintf("rel%d", refCount)
+				refTableMap[v.RelTable] = relAlias
+				refCount++
+			}
 			// rel_table.rel_column AS RelColumn
 			columnGes = append(columnGes, sg.Alias(sg.C(relAlias+"."+v.RelName), k))
 			// LEFT JOIN rel_table ON rel_table.rel_id = t.self_id
-			joinGs = append(joinGs, sg.NewJoiner(
-				[]sg.Ge{sg.C(v.Type),
-					sg.C("JOIN"),
-					sg.Alias(sg.T(v.RelTable), relAlias),
-					sg.C("ON"),
-					sg.C(relAlias + "." + v.RelID),
-					sg.C("="),
-					sg.C("t." + v.SelfColumn)},
-				" ", "", "", false),
-			)
-			refCount++
+			if !joined {
+				joinGs = append(joinGs, sg.NewJoiner(
+					[]sg.Ge{sg.C(v.Type),
+						sg.C("JOIN"),
+						sg.Alias(sg.T(v.RelTable), relAlias),
+						sg.C("ON"),
+						sg.C(relAlias + "." + v.RelID),
+						sg.C("="),
+						sg.C("t." + v.SelfColumn)},
+					" ", "", "", false),
+				)
+			}
 		}
 	}
 	return columnGes, joinGs
@@ -118,8 +125,10 @@ func (o *_Select) Exec(model Model) ([]Model, error) {
 		Where(sg.AndGroup(o.wheres...)).
 		OrderBy(o.orderBys...)
 	refColumns, refJoins := o.getJoinRef()
-	if len(refColumns) > 0 && len(refColumns) == len(refJoins) {
+	if len(refColumns) > 0 {
 		selectBuilder.Select(refColumns...)
+	}
+	if len(refJoins) > 0 {
 		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
 	sqlStr, ps := selectBuilder.Build()

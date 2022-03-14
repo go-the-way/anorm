@@ -24,6 +24,14 @@ An another ORM framework implementation using the new way for Go.
 [![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)
 [![Release](https://img.shields.io/github/release/go-the-way/anorm.svg?style=flat-square)](https://github.com/go-the-way/anorm/releases)
 
+### Features
+- Database: supports all implementation Go `sql` pkg.
+- Model: supports union primary key.
+- Model: supports join ref table(such as: inner, left, right, ...etc)
+- Model: table definition, auto migrate(column def, index def, key def, index def, ...etc).
+- Plugin: pagination plugin(MySQL provided).
+- Insert: provides batch insert method.
+
 ### Quickstart
 ```go
 package main

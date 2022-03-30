@@ -22,10 +22,11 @@ type _Update struct {
 	setColumns    []sg.C
 	ignoreColumns []sg.C
 	wheres        []sg.Ge
+	onlyWheres    []sg.Ge
 }
 
 func newUpdate(o *orm) *_Update {
-	return &_Update{orm: o, ignoreColumns: make([]sg.C, 0), wheres: make([]sg.Ge, 0)}
+	return &_Update{orm: o, ignoreColumns: make([]sg.C, 0), wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
 }
 
 func (o *_Update) Ignore(columns ...sg.C) *_Update {
@@ -61,8 +62,20 @@ func (o *_Update) IfWhere(cond bool, wheres ...sg.Ge) *_Update {
 	return o
 }
 
+func (o *_Update) IfOnlyWhere(cond bool, wheres ...sg.Ge) *_Update {
+	if cond {
+		return o.OnlyWhere(wheres...)
+	}
+	return o
+}
+
 func (o *_Update) Where(wheres ...sg.Ge) *_Update {
 	o.wheres = append(o.wheres, wheres...)
+	return o
+}
+
+func (o *_Update) OnlyWhere(wheres ...sg.Ge) *_Update {
+	o.onlyWheres = append(o.onlyWheres, wheres...)
 	return o
 }
 
@@ -79,15 +92,22 @@ func (o *_Update) getUpdateBuilder(model Model) (string, []interface{}) {
 	builder := sg.UpdateBuilder()
 	setGes := make([]sg.Ge, 0)
 	whereGes := make([]sg.Ge, 0)
-	whereGes = append(whereGes, o.wheres...)
+	appendModelWhere := len(o.onlyWheres) <= 0
 	rt := reflect.ValueOf(model).Elem()
+	if appendModelWhere {
+		whereGes = append(whereGes, o.wheres...)
+	} else {
+		whereGes = append(whereGes, o.onlyWheres...)
+	}
 	for _, f := range fields {
 		column := fieldColumnMap[f]
 		val := rt.FieldByName(f).Interface()
-		if _, have := setMap[column]; !have {
-			if _, have = pkMap[column]; have {
-				whereGes = append(whereGes, sg.Eq(sg.C(column), val))
-				continue
+		if appendModelWhere {
+			if _, have := setMap[column]; !have {
+				if _, have = pkMap[column]; have {
+					whereGes = append(whereGes, sg.Eq(sg.C(column), val))
+					continue
+				}
 			}
 		}
 		if len(setMap) > 0 {

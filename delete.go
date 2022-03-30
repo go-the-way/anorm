@@ -17,12 +17,13 @@ import (
 )
 
 type _Delete struct {
-	orm    *orm
-	wheres []sg.Ge
+	orm        *orm
+	wheres     []sg.Ge
+	onlyWheres []sg.Ge
 }
 
 func newDelete(o *orm) *_Delete {
-	return &_Delete{orm: o, wheres: make([]sg.Ge, 0)}
+	return &_Delete{orm: o, wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
 }
 
 func (o *_Delete) IfWhere(cond bool, wheres ...sg.Ge) *_Delete {
@@ -32,8 +33,20 @@ func (o *_Delete) IfWhere(cond bool, wheres ...sg.Ge) *_Delete {
 	return o
 }
 
+func (o *_Delete) IfOnlyWhere(cond bool, wheres ...sg.Ge) *_Delete {
+	if cond {
+		return o.OnlyWhere(wheres...)
+	}
+	return o
+}
+
 func (o *_Delete) Where(wheres ...sg.Ge) *_Delete {
 	o.wheres = append(o.wheres, wheres...)
+	return o
+}
+
+func (o *_Delete) OnlyWhere(wheres ...sg.Ge) *_Delete {
+	o.onlyWheres = append(o.onlyWheres, wheres...)
 	return o
 }
 
@@ -42,9 +55,14 @@ func (o *_Delete) appendWhereGes(model Model) {
 }
 
 func (o *_Delete) getDeleteBuilder(model Model) (string, []interface{}) {
-	o.appendWhereGes(model)
-	builder := sg.DeleteBuilder()
-	return builder.Where(sg.AndGroup(o.wheres...)).From(o.orm.table()).Build()
+	builder := sg.DeleteBuilder().From(o.orm.table())
+	if len(o.onlyWheres) > 0 {
+		builder.Where(sg.AndGroup(o.onlyWheres...))
+	} else {
+		o.appendWhereGes(model)
+		builder.Where(sg.AndGroup(o.wheres...))
+	}
+	return builder.Build()
 }
 
 func (o *_Delete) Exec(model Model) (int64, error) {

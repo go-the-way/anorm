@@ -140,8 +140,10 @@ func (o *_Update) Exec(model Model) (int64, error) {
 	}
 	execUpdateHookersAfter(model, sqlStr, ps, err)
 	ra := int64(0)
-	if a, aErr := result.RowsAffected(); aErr != nil {
-		ra = a
+	if result != nil {
+		if a, aErr := result.RowsAffected(); aErr != nil {
+			ra = a
+		}
 	}
 	return ra, err
 }

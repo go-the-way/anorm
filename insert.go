@@ -153,8 +153,10 @@ func (o *_Insert) ExecBatch(models ...Model) (int64, error) {
 		return 0, err
 	}
 	ra := int64(0)
-	if a, aErr := result.RowsAffected(); aErr != nil {
-		ra = a
+	if result != nil {
+		if a, aErr := result.RowsAffected(); aErr != nil {
+			ra = a
+		}
 	}
 	return ra, err
 }

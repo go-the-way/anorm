@@ -16,74 +16,77 @@ import (
 	"github.com/go-the-way/sg"
 )
 
-type _Delete struct {
-	orm        *orm
+type deleteOperation[E Entity] struct {
+	orm        *Orm[E]
 	wheres     []sg.Ge
 	onlyWheres []sg.Ge
 }
 
-func newDelete(o *orm) *_Delete {
-	return &_Delete{orm: o, wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
+func newsDeleteOperation[E Entity](o *Orm[E]) *deleteOperation[E] {
+	return &deleteOperation[E]{orm: o, wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
 }
 
-func (o *_Delete) IfWhere(cond bool, wheres ...sg.Ge) *_Delete {
+// IfWhere if cond is true, append wheres
+func (o *deleteOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *deleteOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
 	return o
 }
 
-func (o *_Delete) IfOnlyWhere(cond bool, wheres ...sg.Ge) *_Delete {
+// IfOnlyWhere if cond is true, append only wheres
+func (o *deleteOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) *deleteOperation[E] {
 	if cond {
 		return o.OnlyWhere(wheres...)
 	}
 	return o
 }
 
-func (o *_Delete) Where(wheres ...sg.Ge) *_Delete {
+// Where append wheres
+func (o *deleteOperation[E]) Where(wheres ...sg.Ge) *deleteOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
-func (o *_Delete) OnlyWhere(wheres ...sg.Ge) *_Delete {
+// OnlyWhere append only wheres
+func (o *deleteOperation[E]) OnlyWhere(wheres ...sg.Ge) *deleteOperation[E] {
 	o.onlyWheres = append(o.onlyWheres, wheres...)
 	return o
 }
 
-func (o *_Delete) appendWhereGes(model Model) {
-	o.wheres = append(o.wheres, o.orm.getWhereGes(model)...)
+func (o *deleteOperation[E]) appendWhereGes(entity E) {
+	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
-func (o *_Delete) getDeleteBuilder(model Model) (string, []interface{}) {
+func (o *deleteOperation[E]) getDeleteBuilder(entity E) (string, []any) {
 	builder := sg.DeleteBuilder().From(o.orm.table())
 	if len(o.onlyWheres) > 0 {
 		builder.Where(sg.AndGroup(o.onlyWheres...))
 	} else {
-		o.appendWhereGes(model)
+		o.appendWhereGes(entity)
 		builder.Where(sg.AndGroup(o.wheres...))
 	}
 	return builder.Build()
 }
 
-func (o *_Delete) Exec(model Model) (int64, error) {
+// Exec exec delete ops
+func (o *deleteOperation[E]) Exec(entity E) (int64, error) {
 	var (
 		result sql.Result
 		err    error
 	)
-	sqlStr, ps := o.getDeleteBuilder(model)
-	execDeleteHookersBefore(model, &sqlStr, &ps)
-	if debug() {
-		(&execLog{"Delete.Exec", sqlStr, ps}).Log()
-	}
+	sqlStr, ps := o.getDeleteBuilder(entity)
+	queryLog("OpsForDelete.Exec", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	execDeleteHookersAfter(model, sqlStr, ps, err)
+	queryErrorLog("OpsForDelete.Exec", sqlStr, ps, err)
 	ra := int64(0)
 	if result != nil {
-		ra, _ = result.RowsAffected()
+		ra, err = result.RowsAffected()
+		queryErrorLog("OpsForDelete.Exec", sqlStr, ps, err)
 	}
 	return ra, err
 }

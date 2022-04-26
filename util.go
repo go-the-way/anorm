@@ -13,25 +13,13 @@ package anorm
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
-func getModelPkgName(model Model) string {
-	return reflect.TypeOf(model).String()
-}
-
-func getModelTableName(model Model, sty Strategy) string {
-	pkgName := reflect.TypeOf(model).String()
-	pss := strings.Split(pkgName, ".")
-	tableName := pss[len(pss)-1]
-	metadata := model.MetaData()
-	if t := metadata.Table; t != "" {
-		tableName = t
-	} else {
-		tableName = getStrategyName(tableName, sty)
-	}
-	return tableName
+func getEntityPkgName[E Entity](entity E) string {
+	return reflect.TypeOf(entity).String()
 }
 
 func getStrategyName(str string, sty Strategy) string {
@@ -66,38 +54,33 @@ func getStrategyName(str string, sty Strategy) string {
 	return str
 }
 
-func scanStruct(rows *sql.Rows, model Model) ([]Model, error) {
-	ptr := reflect.TypeOf(model)
-	defer func() {
-		if rows != nil {
-			err := rows.Close()
-			handleErr(err)
-		}
-	}()
-	columns, err := rows.Columns()
-	if err != nil {
+func scanStruct[E Entity](rows *sql.Rows, entity E) ([]E, error) {
+	defer func() { _ = rows.Close() }()
+	ptr := reflect.TypeOf(entity)
+	result := make([]E, 0)
+	if columns, err := rows.Columns(); err != nil {
 		return nil, err
-	}
-	result := make([]Model, 0)
-	for rows.Next() {
-		structVal := reflect.New(ptr.Elem())
-		handleErr(rows.Scan(newColumnPtr(structVal, columns)...))
-		result = append(result, structVal.Interface().(Model))
+	} else {
+		for rows.Next() {
+			structVal := reflect.New(ptr.Elem())
+			if err2 := rows.Scan(newColumnPtr(structVal, columns)...); err2 != nil {
+				return nil, err2
+			}
+			result = append(result, structVal.Interface().(E))
+		}
 	}
 	return result, nil
 }
 
-func newColumnPtr(structVal reflect.Value, columns []string) []interface{} {
-	pts := make([]interface{}, len(columns))
+func newColumnPtr(structVal reflect.Value, columns []string) []any {
+	pts := make([]any, len(columns))
 	for i, c := range columns {
 		pts[i] = structVal.Elem().FieldByName(c).Addr().Interface()
 	}
 	return pts
 }
 
-func ifEmpty(str, defaultVal string) string {
-	if str == "" {
-		return defaultVal
-	}
-	return str
+func entityNotNil(entity Entity) bool {
+	s := fmt.Sprintf("%v", entity)
+	return s != "<nil>"
 }

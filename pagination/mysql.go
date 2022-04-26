@@ -9,21 +9,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anorm
+package pagination
 
-type Strategy int
+type mysql struct{}
 
-const (
-	// Default defines default not changed
-	// EntityConfigurator:User  => Table:User
-	// Field:UserName  => Column:UserName
-	Default Strategy = iota
-	// Underline defines to transform a underline style name
-	// EntityConfigurator:UserEntity => Table:user_entity
-	// Field:UserName => Column:user_name
-	Underline
-	// CamelCase defines to transform a camelcase style name
-	// EntityConfigurator:UserEntity => Table:userEntity
-	// Field:UserName => Column:userName
-	CamelCase
-)
+// Page mysql implementation
+func (m *mysql) Page(sql string, offset, size int) (sqlStr string, args []any) {
+	return sql + " LIMIT ?, ?", []any{offset, size}
+}

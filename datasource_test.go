@@ -16,37 +16,28 @@ import (
 	"testing"
 )
 
-func TestNilDS(t *testing.T) {
-	defer func() {
-		if re := recover(); re != nil && reflect.DeepEqual(re, errDSIsNil) {
-			t.Log("test ok")
-		}
-	}()
-	DS(nil)
-}
-
 func TestDS(t *testing.T) {
-	DS(testDB)
-	if !reflect.DeepEqual(dsMap["_"], testDB) {
+	DataSourcePool.Push(testDB)
+	if !reflect.DeepEqual(DataSourcePool.Required("_"), testDB) {
 		t.Fatal("call DS, expect have a key `_` DS in dsMap")
 	}
-	if !reflect.DeepEqual(dsMap["master"], testDB) {
+	if !reflect.DeepEqual(DataSourcePool.Required("master"), testDB) {
 		t.Fatal("call DS, expect have a key `master` DS in dsMap")
 	}
 }
 
 func TestDSWithName(t *testing.T) {
-	DSWithName("secondary", testDB)
-	if !reflect.DeepEqual(dsMap["secondary"], testDB) {
+	DataSourcePool.PushDB("secondary", testDB)
+	if !reflect.DeepEqual(DataSourcePool.Required("secondary"), testDB) {
 		t.Fatal("call DSWithName, expect have a key `secondary` DS in dsMap")
 	}
 }
 
 func TestDSRequired(t *testing.T) {
 	defer func() {
-		if re := recover(); re != nil && reflect.DeepEqual(re, errRequiredNamedDSFunc("hello")) {
+		if re := recover(); re != nil {
 			t.Logf("test ok")
 		}
 	}()
-	dsMap.required("hello")
+	DataSourcePool.Required("hello")
 }

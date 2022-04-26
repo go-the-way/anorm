@@ -9,26 +9,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package anorm
+package pagination
 
-var (
-	MySQLPagination = &mysqlPagination{}
-)
+type pg struct{}
 
-type (
-	// Pagination plugin interface
-	Pagination interface {
-		Page(originalSql string, offset, size int) (string, []interface{})
-	}
-	// ExecHooker defines exec hooker before and after exec SQL
-	ExecHooker interface {
-		BeforeExec(model Model, sqlStr *string, ps *[]interface{})
-		AfterExec(model Model, sqlStr string, ps []interface{}, err error)
-	}
-	mysqlPagination struct {
-	}
-)
-
-func (m *mysqlPagination) Page(originalSql string, offset, size int) (string, []interface{}) {
-	return originalSql + " LIMIT ?, ?", []interface{}{offset, size}
+// Page pgsql implementation
+func (p *pg) Page(sql string, offset, size int) (sqlStr string, args []any) {
+	return sql + " LIMIT ? OFFSET ?", []any{size, offset}
 }

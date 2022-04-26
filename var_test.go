@@ -24,7 +24,7 @@ import (
 var (
 	testDB                *sql.DB
 	testDriverName        = "mysql"
-	errTestDSNNotProvided = errors.New("anorm.test: the test DSN not provided")
+	errTestDSNNotProvided = errors.New("anorm: the test DSN not provided")
 
 	testName    = "coco"
 	testAge     = 9
@@ -33,15 +33,15 @@ var (
 )
 
 type (
-	userModel struct {
+	userEntity struct {
 		ID         int       `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
 		Name       string    `orm:"pk{F} c{name} def{name varchar(50) not null default 'hello world' comment 'Name'}"`
 		Age        int       `orm:"pk{F} c{age} def{age int not null default '20' comment 'Age'}"`
 		Address    string    `orm:"pk{F} c{address} def{address varchar(100) not null comment 'Address'}"`
 		Phone      string    `orm:"pk{F} c{phone} def{phone varchar(11) not null default '13900000000' comment 'Phone'}"`
-		CreateTime time.Time `orm:"pk{F} c{create_time} ig{T} def{create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'CreateTime'}" json:"create_time"`
+		CreateTime time.Time `orm:"pk{F} c{create_time} ig{T} ug{T} def{create_time datetime not null default current_timestamp comment 'CreateTime'}" json:"create_time"`
 	}
-	userModelNull struct {
+	userEntityNull struct {
 		ID         int            `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
 		Name       sql.NullString `orm:"pk{F} c{name} def{name varchar(50) null comment 'Name'}"`
 		Age        sql.NullInt32  `orm:"pk{F} c{age} def{age int null comment 'Age'}"`
@@ -49,40 +49,36 @@ type (
 		Phone      sql.NullString `orm:"pk{F} c{phone} def{phone varchar(11) null comment 'Phone'}"`
 		CreateTime sql.NullTime   `orm:"pk{F} c{create_time} ig{T} def{create_time datetime null comment 'CreateTime'}" json:"create_time"`
 	}
-	userUintModel struct {
+	userUintEntity struct {
 		ID   uint   `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
 		Name string `orm:"pk{F} c{name} def{name varchar(50) not null default 'hello world' comment 'Name'}"`
 	}
 )
 
-func (u *userModel) MetaData() *ModelMeta {
-	return &ModelMeta{
-		Migrate:           true,
-		Comment:           "The userModel Table",
-		ColumnDefinitions: []sg.Ge{},
-		IndexDefinitions:  []sg.Ge{sg.IndexDefinition(false, sg.P("idx_name"), sg.C("name"))},
-		InsertIgnores:     []sg.C{"id", "create_time"},
-	}
+func (u *userEntity) Configure(c *EC) {
+	c.Table = "user_entity"
+	c.Migrate = true
+	c.IFNotExists = true
+	c.Commented = true
+	c.Comment = "The userEntity Table"
+	c.IndexDefinitions = []sg.Ge{sg.IndexDefinition(false, sg.P("idx_name"), sg.C("name"))}
+	c.InsertIgnores = []sg.C{"id", "create_time"}
 }
 
-func (u *userModelNull) MetaData() *ModelMeta {
-	return &ModelMeta{
-		Migrate:           true,
-		Comment:           "The userModelNull Table",
-		ColumnDefinitions: []sg.Ge{},
-		IndexDefinitions:  []sg.Ge{},
-		InsertIgnores:     []sg.C{},
-	}
+func (u *userEntityNull) Configure(c *EC) {
+	c.Table = "user_entity_null"
+	c.Migrate = true
+	c.IFNotExists = true
+	c.Commented = true
+	c.Comment = "The userEntityNull Table"
 }
 
-func (u *userUintModel) MetaData() *ModelMeta {
-	return &ModelMeta{
-		Migrate:           true,
-		Comment:           "The userUintModel Table",
-		ColumnDefinitions: []sg.Ge{},
-		IndexDefinitions:  []sg.Ge{},
-		InsertIgnores:     []sg.C{},
-	}
+func (u *userUintEntity) Configure(c *EC) {
+	c.Table = "user_uint_entity"
+	c.Migrate = true
+	c.IFNotExists = true
+	c.Commented = true
+	c.Comment = "The userUintEntity Table"
 }
 
 var envInit = false
@@ -97,66 +93,66 @@ func testInit() {
 	if dsn := os.Getenv("ANORM_TEST_DSN"); dsn == "" {
 		panic(errTestDSNNotProvided)
 	} else {
-		if tdb, err := sql.Open(testDriverName, dsn); err != nil {
+		if tdb, err := sql.Open(testDriverName, dsn+"?parseTime=true"); err != nil {
 			panic(err)
 		} else {
 			testDB = tdb
-			DS(tdb)
+			DataSourcePool.Push(tdb)
 		}
 	}
-	Register(new(userModel))
-	Register(new(userModelNull))
-	Register(new(userUintModel))
+	Register(new(userEntity))
+	Register(new(userEntityNull))
+	Register(new(userUintEntity))
 }
 
-func getTest() *userModel {
-	return &userModel{Name: testName, Age: testAge, Address: testAddress, Phone: testPhone}
+func getTest() *userEntity {
+	return &userEntity{Name: testName, Age: testAge, Address: testAddress, Phone: testPhone}
 }
 
-func getNullTest() *userModelNull {
-	return &userModelNull{Name: NullString(testName), Age: NullInt32(int32(testAge)), Address: NullString(testAddress), Phone: NullString(testPhone)}
+func getNullTest() *userEntityNull {
+	return &userEntityNull{Name: NullString(testName), Age: NullInt32(int32(testAge)), Address: NullString(testAddress), Phone: NullString(testPhone)}
 }
 
-func insertUserModel(name string, age int, address, phone string) error {
-	_, err := testDB.Exec("insert into user_model(name,age,address,phone) values (?,?,?,?)", name, age, address, phone)
+func insertUserEntity(name string, age int, address, phone string) error {
+	_, err := testDB.Exec("insert into user_entity(name,age,address,phone) values (?,?,?,?)", name, age, address, phone)
 	return err
 }
 
 func insertTest() error {
-	return insertUserModel(testName, testAge, testAddress, testPhone)
+	return insertUserEntity(testName, testAge, testAddress, testPhone)
 }
 
-func insertUserModelNull(name string, age int, address, phone string) error {
-	_, err := testDB.Exec("insert into user_model_null(name,age,address,phone) values (?,?,?,?)", name, age, address, phone)
+func insertUserEntityNull(name string, age int, address, phone string) error {
+	_, err := testDB.Exec("insert into user_entity_null(name,age,address,phone) values (?,?,?,?)", name, age, address, phone)
 	return err
 }
 
 func insertNullTest() error {
-	return insertUserModelNull(testName, testAge, testAddress, testPhone)
+	return insertUserEntityNull(testName, testAge, testAddress, testPhone)
 }
 
-func selectUserModelCount() int {
+func selectUserEntityCount() int {
 	c := 0
-	_ = testDB.QueryRow("select count(0) from user_model").Scan(&c)
+	_ = testDB.QueryRow("select count(0) from user_entity").Scan(&c)
 	return c
 }
 
-func selectUserModelNullCount() int {
+func selectUserEntityNullCount() int {
 	c := 0
-	_ = testDB.QueryRow("select count(0) from user_model_null").Scan(&c)
+	_ = testDB.QueryRow("select count(0) from user_entity_null").Scan(&c)
 	return c
 }
 
 func truncateTestTable() {
-	_, _ = testDB.Exec("truncate table user_model")
+	_, _ = testDB.Exec("truncate table user_entity")
 }
 
 func truncateTestNullTable() {
-	_, _ = testDB.Exec("truncate table user_model_null")
+	_, _ = testDB.Exec("truncate table user_entity_null")
 }
 
 func truncateTestUintTable() {
-	_, _ = testDB.Exec("truncate table user_uint_model")
+	_, _ = testDB.Exec("truncate table user_uint_entity")
 }
 
 func getTestGes() []sg.Ge {

@@ -12,29 +12,30 @@
 package anorm
 
 import (
+	"github.com/go-the-way/sg"
 	"testing"
 )
 
 func TestSelectCountExec(t *testing.T) {
 	truncateTestTable()
 	_ = insertTest()
-	o := New(new(userModel))
+	o := New(new(userEntity))
 	{
-		if c, err := o.SelectCount().Exec(nil); err != nil {
+		if c, err := o.OpsForSelectCount().Exec(nil); err != nil {
 			t.Fatalf("TestSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestSelectCountExec failed!")
 		}
 	}
 	{
-		if c, err := o.SelectCount().Exec(getTest()); err != nil {
+		if c, err := o.OpsForSelectCount().Exec(getTest()); err != nil {
 			t.Fatalf("TestSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestSelectCountExec failed!")
 		}
 	}
 	{
-		if c, err := o.SelectCount().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if c, err := o.OpsForSelectCount().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestSelectCountExec failed!")
@@ -45,26 +46,32 @@ func TestSelectCountExec(t *testing.T) {
 func TestNullSelectCountExec(t *testing.T) {
 	truncateTestNullTable()
 	_ = insertNullTest()
-	o := New(new(userModelNull))
+	o := New(new(userEntityNull))
 	{
-		if c, err := o.SelectCount().Exec(nil); err != nil {
+		if c, err := o.OpsForSelectCount().Exec(nil); err != nil {
 			t.Fatalf("TestNullSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestNullSelectCountExec failed!")
 		}
 	}
 	{
-		if c, err := o.SelectCount().Exec(getNullTest()); err != nil {
+		if c, err := o.OpsForSelectCount().Exec(getNullTest()); err != nil {
 			t.Fatalf("TestNullSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestNullSelectCountExec failed!")
 		}
 	}
 	{
-		if c, err := o.SelectCount().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if c, err := o.OpsForSelectCount().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestNullSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestNullSelectCountExec failed!")
 		}
+	}
+}
+
+func TestSelectCountError(t *testing.T) {
+	if _, err := New(new(userEntityNull)).OpsForSelectCount().Where(sg.Eq("ta", 100)).Exec(nil); err == nil {
+		t.Error("TestSelectCountError failed")
 	}
 }

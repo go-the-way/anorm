@@ -15,52 +15,48 @@ import (
 	"github.com/go-the-way/sg"
 )
 
-type _SelectCount struct {
-	orm    *orm
+type selectCountOperation[E Entity] struct {
+	orm    *Orm[E]
 	wheres []sg.Ge
 }
 
-func newSelectCount(o *orm) *_SelectCount {
-	return &_SelectCount{orm: o, wheres: make([]sg.Ge, 0)}
+func newSelectCountOperation[E Entity](o *Orm[E]) *selectCountOperation[E] {
+	return &selectCountOperation[E]{orm: o, wheres: make([]sg.Ge, 0)}
 }
 
-func (o *_SelectCount) IfWhere(cond bool, wheres ...sg.Ge) *_SelectCount {
+func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectCountOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
 	return o
 }
 
-func (o *_SelectCount) Where(wheres ...sg.Ge) *_SelectCount {
+func (o *selectCountOperation[E]) Where(wheres ...sg.Ge) *selectCountOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
-func (o *_SelectCount) getTableName() sg.Ge {
-	return sg.T(modelTableMap[getModelPkgName(o.orm.model)])
+func (o *selectCountOperation[E]) getTableName() sg.Ge {
+	return sg.T(entityTableMap[getEntityPkgName(o.orm.entity)])
 }
 
-func (o *_SelectCount) appendWhereGes(model Model) {
-	o.wheres = append(o.wheres, o.orm.getWhereGes(model)...)
+func (o *selectCountOperation[E]) appendWhereGes(entity E) {
+	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
-func (o *_SelectCount) Exec(model Model) (int64, error) {
-	o.appendWhereGes(model)
+func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
+	o.appendWhereGes(entity)
 	sqlStr, ps := sg.SelectBuilder().
 		Select(sg.Alias(sg.C("count(0)"), "c")).
 		From(o.getTableName()).
 		Where(sg.AndGroup(o.wheres...)).
 		Build()
-	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
-	if debug() {
-		(&execLog{"SelectCount.Exec", sqlStr, ps}).Log()
-	}
+	queryLog("OpsForSelectCount.Exec", sqlStr, ps)
 	row := o.orm.db.QueryRow(sqlStr, ps...)
-	execSelectHookersAfter(model, sqlStr, ps, row.Err())
-	if err := row.Err(); err != nil {
-		return 0, err
+	queryErrorLog("OpsForSelectCount.Exec", sqlStr, ps, row.Err())
+	if err = row.Err(); err != nil {
+		return
 	}
-	count := int64(0)
-	err := row.Scan(&count)
-	return count, err
+	err = row.Scan(&count)
+	return
 }

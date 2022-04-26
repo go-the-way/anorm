@@ -12,45 +12,35 @@
 package anorm
 
 import (
+	"database/sql"
 	"fmt"
+	"github.com/go-the-way/anorm/pagination"
 	"github.com/go-the-way/sg"
 )
 
-type _Select struct {
-	orm      *orm
+type selectOperation[E Entity] struct {
+	orm      *Orm[E]
 	join     bool
 	columns  []sg.Ge
 	wheres   []sg.Ge
 	orderBys []sg.Ge
 }
 
-func newSelect(o *orm) *_Select {
-	return &_Select{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
+func newSelectOperation[E Entity](o *Orm[E]) *selectOperation[E] {
+	return &selectOperation[E]{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
 }
 
-func (o *_Select) Join() *_Select {
+func (o *selectOperation[E]) Join() *selectOperation[E] {
 	o.join = true
 	return o
 }
 
-func (o *_Select) getColumns() []sg.Ge {
-	// fixed: have no alias for field
-	cm := make(map[sg.Ge]struct{}, 0)
-	if o.columns != nil {
-		for _, c := range o.columns {
-			cm[c] = struct{}{}
-		}
-	}
+func (o *selectOperation[E]) getColumns() []sg.Ge {
 	columnGes := make([]sg.Ge, 0)
-	columns := modelColumnMap[getModelPkgName(o.orm.model)]
-	joinRefs := modelJoinRefMap[getModelPkgName(o.orm.model)]
+	columns := entityColumnMap[getEntityPkgName(o.orm.entity)]
+	joinRefs := entityJoinRefMap[getEntityPkgName(o.orm.entity)]
 	for _, c := range columns {
-		if len(cm) > 0 {
-			if _, have := cm[sg.C(c)]; !have {
-				continue
-			}
-		}
-		fieldName := modelColumnFieldMap[getModelPkgName(o.orm.model)][c]
+		fieldName := entityColumnFieldMap[getEntityPkgName(o.orm.entity)][c]
 		if joinRefs == nil || joinRefs[fieldName] == nil {
 			columnGes = append(columnGes, sg.Alias(sg.C("t."+c), fieldName))
 		}
@@ -58,12 +48,12 @@ func (o *_Select) getColumns() []sg.Ge {
 	return columnGes
 }
 
-func (o *_Select) getJoinRef() ([]sg.Ge, []sg.Ge) {
+func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	columnGes := make([]sg.Ge, 0)
 	joinGs := make([]sg.Ge, 0)
 	refCount := 1
 	refTableMap := make(map[string]string, 0)
-	if joinRefMap, have := modelJoinRefMap[getModelPkgName(o.orm.model)]; have && o.join {
+	if joinRefMap, have := entityJoinRefMap[getEntityPkgName(o.orm.entity)]; have && o.join {
 		// append join column
 		for k, v := range joinRefMap {
 			relAlias, joined := refTableMap[v.RelTable]
@@ -92,33 +82,42 @@ func (o *_Select) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	return columnGes, joinGs
 }
 
-func (o *_Select) getTableName() sg.Ge {
-	return sg.T(modelTableMap[getModelPkgName(o.orm.model)])
+func (o *selectOperation[E]) getTableName() sg.Ge {
+	return sg.T(entityTableMap[getEntityPkgName(o.orm.entity)])
 }
 
-func (o *_Select) IfWhere(cond bool, wheres ...sg.Ge) *_Select {
+func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
 	return o
 }
 
-func (o *_Select) Where(wheres ...sg.Ge) *_Select {
+func (o *selectOperation[E]) Where(wheres ...sg.Ge) *selectOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
-func (o *_Select) OrderBy(orderBys ...sg.Ge) *_Select {
+func (o *selectOperation[E]) OrderBy(orderBys ...sg.Ge) *selectOperation[E] {
 	o.orderBys = append(o.orderBys, orderBys...)
 	return o
 }
 
-func (o *_Select) appendWhereGes(model Model) {
-	o.wheres = append(o.wheres, o.orm.getWhereGes(model)...)
+func (o *selectOperation[E]) appendWhereGes(entity E) {
+	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
-func (o *_Select) Exec(model Model) ([]Model, error) {
-	o.appendWhereGes(model)
+func (o *selectOperation[E]) ExecOne(entity E) (e E, err error) {
+	if es, err2 := o.Exec(entity); err2 == nil && len(es) > 0 {
+		e = es[0]
+	} else {
+		err = err2
+	}
+	return
+}
+
+func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
+	o.appendWhereGes(entity)
 	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
 		From(sg.Alias(o.getTableName(), "t")).
@@ -132,28 +131,24 @@ func (o *_Select) Exec(model Model) ([]Model, error) {
 		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
 	sqlStr, ps := selectBuilder.Build()
-	if debug() {
-		(&execLog{"Select.Exec", sqlStr, ps}).Log()
+	queryLog("OpsForSelect.Exec", sqlStr, ps)
+	var rows *sql.Rows
+	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
+		queryErrorLog("OpsForSelect.Exec", sqlStr, ps, err)
+		return
 	}
-	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
-	rows, err := o.orm.db.Query(sqlStr, ps...)
-	execSelectHookersAfter(o.orm.model, sqlStr, ps, err)
-	if err != nil {
-		return nil, err
-	}
-	return scanStruct(rows, o.orm.model)
+	return scanStruct(rows, o.orm.entity)
 }
 
-func (o *_Select) ExecPage(model Model, pager Pagination, offset, size int) ([]Model, int64, error) {
-	var err error
-	sc := o.orm.SelectCount()
+func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
+	sc := o.orm.OpsForSelectCount()
 	sc.wheres = append(sc.wheres, o.wheres...)
-	c, err := sc.Exec(model)
+	total, err = sc.Exec(entity)
 	if err != nil {
-		return nil, 0, err
+		return
 	}
-	if c <= 0 {
-		return make([]Model, 0), 0, nil
+	if total <= 0 {
+		return make([]E, 0), 0, nil
 	}
 	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
@@ -161,22 +156,21 @@ func (o *_Select) ExecPage(model Model, pager Pagination, offset, size int) ([]M
 		Where(sg.AndGroup(o.wheres...)).
 		OrderBy(o.orderBys...)
 	refColumns, refJoins := o.getJoinRef()
-	if len(refColumns) > 0 && len(refColumns) == len(refJoins) {
+	if len(refColumns) > 0 {
 		selectBuilder.Select(refColumns...)
+	}
+	if len(refJoins) > 0 {
 		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
 	sqlStr, ps := selectBuilder.Build()
 	sqlStr, pps := pager.Page(sqlStr, offset, size)
 	ps = append(ps, pps...)
-	execSelectHookersBefore(o.orm.model, &sqlStr, &ps)
-	if debug() {
-		(&execLog{"Select.ExecPage", sqlStr, ps}).Log()
+	queryLog("OpsForSelect.ExecPage", sqlStr, ps)
+	var rows *sql.Rows
+	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
+		queryErrorLog("OpsForSelect.ExecPage", sqlStr, ps, err)
+		return
 	}
-	rows, err := o.orm.db.Query(sqlStr, ps...)
-	execSelectHookersAfter(o.orm.model, sqlStr, ps, err)
-	if err != nil {
-		return nil, 0, err
-	}
-	models, err := scanStruct(rows, o.orm.model)
-	return models, c, err
+	entities, err = scanStruct(rows, o.orm.entity)
+	return
 }

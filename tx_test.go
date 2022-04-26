@@ -11,37 +11,22 @@
 
 package anorm
 
-import (
-	"database/sql"
-	"errors"
-	"fmt"
-)
+import "testing"
 
-type dsm map[string]*sql.DB
-
-var (
-	errRequiredNamedDSFunc = func(name string) error { return errors.New(fmt.Sprintf("required named[%s] DS", name)) }
-	errDSIsNil             = errors.New("DS is nil")
-
-	dsMap = make(dsm, 0)
-)
-
-func DS(db *sql.DB) {
-	if db == nil {
-		panic(errDSIsNil)
+func TestTxManager(t *testing.T) {
+	txm := TxManager()
+	if tx, err := testDB.Begin(); err != nil {
+		t.Error("TestTxManager failed")
+	} else {
+		txm.Join(tx)
+		_ = tx.Rollback()
 	}
-	DSWithName("_", db)
-	DSWithName("master", db)
-}
 
-func DSWithName(name string, db *sql.DB) {
-	dsMap[name] = db
-}
-
-func (d *dsm) required(name string) *sql.DB {
-	db := (*d)[name]
-	if db == nil {
-		panic(errRequiredNamedDSFunc(name))
+	if err := txm.Commit(); err == nil {
+		t.Error("TestTxManager failed")
 	}
-	return db
+
+	if err := txm.Rollback(); err == nil {
+		t.Error("TestTxManager failed")
+	}
 }

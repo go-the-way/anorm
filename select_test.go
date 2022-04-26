@@ -12,6 +12,8 @@
 package anorm
 
 import (
+	"github.com/go-the-way/anorm/pagination"
+	"github.com/go-the-way/sg"
 	"testing"
 )
 
@@ -24,35 +26,85 @@ func TestSelectExec(t *testing.T) {
 	if err := insertTest(); err != nil {
 		t.Fatalf("TestSelectExec failed: %v\n", err)
 	}
-	o := New(new(userModel))
+	o := New(new(userEntity))
 	{
-		if models, err := o.Select().Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().OrderBy(sg.C("id")).Exec(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().Where(getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Where(getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().Where().Exec(getTest()); err != nil {
+		if entities, err := o.OpsForSelect().Where().Exec(getTest()); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
+}
+
+func TestSelectExecOne(t *testing.T) {
+	truncateTestTable()
+	if err := insertTest(); err != nil {
+		t.Fatalf("TestSelectExecOne failed: %v\n", err)
+	}
+	o := New(new(userEntity))
+	{
+		if ee, err := o.OpsForSelect().ExecOne(nil); err != nil {
+			t.Fatalf("TestSelectExecOne failed: %v\n", err)
+		} else if ee == nil {
+			t.Fatalf("TestSelectExecOne failed!")
+		}
+	}
+}
+
+func TestSelectExecOne2(t *testing.T) {
+	truncateTestTable()
+	o := New(new(userEntity))
+	{
+		if ee, err := o.OpsForSelect().ExecOne(nil); err != nil {
+			t.Fatalf("TestSelectExecOne failed: %v\n", err)
+		} else if ee != nil {
+			t.Fatalf("TestSelectExecOne failed!")
+		}
+	}
+}
+
+func TestSelectExecPageError(t *testing.T) {
+	{
+		truncateTestTable()
+		o := New(new(userEntity))
+		{
+			if _, _, err := o.OpsForSelect().Where(sg.And(sg.Eq("1", 1))).ExecPage(nil, pagination.Pg, 0, 2); err == nil {
+				t.Fatalf("TestSelectExecPageError failed: %v\n", err)
+			}
+		}
+	}
+	{
+		o := New(new(userEntity))
+		{
+			if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+				t.Fatalf("TestSelectExecPageError failed: %v\n", err)
+			} else if len(entities) != 0 && int(count) != 0 {
+				t.Fatal("TestSelectExecPageError failed!")
+			}
+		}
+	}
+
 }
 
 func TestSelectExecPage(t *testing.T) {
@@ -61,32 +113,32 @@ func TestSelectExecPage(t *testing.T) {
 	for i := 0; i < c; i++ {
 		_ = insertTest()
 	}
-	o := New(new(userModel))
+	o := New(new(userEntity))
 	{
-		if models, count, err := o.Select().ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().IfWhere(true, getTestGes()...).ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().Where(getTestGes()...).ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().ExecPage(getTest(), MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().ExecPage(getTest(), pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
@@ -97,32 +149,32 @@ func TestSelectNullExec(t *testing.T) {
 	if err := insertNullTest(); err != nil {
 		t.Fatalf("TestSelectNullExec failed: %v\n", err)
 	}
-	o := New(new(userModelNull))
+	o := New(new(userEntityNull))
 	{
-		if models, err := o.Select().Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Exec(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().Where(getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Where(getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if models, err := o.Select().Where().Exec(getNullTest()); err != nil {
+		if entities, err := o.OpsForSelect().Where().Exec(getNullTest()); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
-		} else if len(models) != 1 {
+		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
@@ -134,33 +186,138 @@ func TestSelectNullExecPage(t *testing.T) {
 	for i := 0; i < c; i++ {
 		_ = insertNullTest()
 	}
-	o := New(new(userModelNull))
+	o := New(new(userEntityNull))
 	{
-		if models, count, err := o.Select().ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().IfWhere(true, getTestGes()...).ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().Where(getTestGes()...).ExecPage(nil, MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if models, count, err := o.Select().ExecPage(getNullTest(), MySQLPagination, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().ExecPage(getNullTest(), pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
-		} else if len(models) != 2 && int(count) != c {
+		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
+}
+
+func TestSelectJoin(t *testing.T) {
+	Register(new(_JoinMaster))
+	Register(new(_JoinRel))
+	Register(new(_JoinMasterError))
+	Register(new(_JoinRelError))
+
+	_, _ = DataSourcePool.Required("master").Exec("truncate table join_master")
+	_, _ = DataSourcePool.Required("master").Exec("truncate table join_rel")
+	_, _ = DataSourcePool.Required("master").Exec("truncate table join_master_err")
+	_, _ = DataSourcePool.Required("master").Exec("truncate table join_rel_err")
+
+	{
+		o := New(new(_JoinMaster))
+		if es, err := o.OpsForSelect().Join().Exec(nil); err != nil {
+			t.Error("TestSelectJoin failed")
+		} else if len(es) != 0 {
+			t.Error("TestSelectJoin failed")
+		}
+	}
+
+	{
+		o := New(new(_JoinMaster))
+		if es, err := o.OpsForSelect().Where(sg.In("xyz", 1, 2, 3, 4)).Exec(nil); err == nil {
+			t.Error("TestSelectJoin failed")
+		} else if es != nil {
+			t.Error("TestSelectJoin failed")
+		}
+	}
+
+	{
+		o := New(new(_JoinMaster))
+		jr := &_JoinRel{0, "Rel1"}
+		if err := New(new(_JoinRel)).OpsForInsert().Exec(jr); err != nil {
+			t.Error("TestSelectJoin failed")
+		}
+		if err := o.OpsForInsert().Exec(&_JoinMaster{0, "hello", jr.ID, ""}); err != nil {
+			t.Error("TestSelectJoin failed")
+		}
+		if es, total, err := o.OpsForSelect().Join().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+			t.Error("TestSelectJoin failed")
+		} else if len(es) <= 0 || total <= 0 {
+			t.Error("TestSelectJoin failed")
+		}
+	}
+
+	{
+		o := New(new(_JoinMasterError))
+		jr := &_JoinRelError{0, "Rel1"}
+		if err := New(new(_JoinRelError)).OpsForInsert().Exec(jr); err != nil {
+			t.Error("TestSelectJoin failed")
+		}
+		if err := o.OpsForInsert().Exec(&_JoinMasterError{0, "hello", jr.ID, ""}); err != nil {
+			t.Error("TestSelectJoin failed")
+		}
+		if _, _, err := o.OpsForSelect().Join().ExecPage(nil, pagination.MySql, 0, 2); err == nil {
+			t.Error("TestSelectJoin failed")
+		}
+	}
+}
+
+type (
+	_JoinMaster struct {
+		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
+
+		RelID   int    `orm:"c{rel_id} def{rel_id int}"`
+		RelName string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name}"`
+	}
+	_JoinRel struct {
+		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
+	}
+	_JoinMasterError struct {
+		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
+
+		RelID   int    `orm:"c{rel_id} def{rel_id int}"`
+		RelName string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name2}"`
+	}
+	_JoinRelError struct {
+		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
+	}
+)
+
+func (_ *_JoinMaster) Configure(c *EC) {
+	c.Migrate = true
+	c.Table = "join_master"
+}
+
+func (_ *_JoinRel) Configure(c *EC) {
+	c.Migrate = true
+	c.Table = "join_rel"
+}
+
+func (_ *_JoinMasterError) Configure(c *EC) {
+	c.Migrate = true
+	c.Table = "join_master_err"
+}
+
+func (_ *_JoinRelError) Configure(c *EC) {
+	c.Migrate = true
+	c.Table = "join_rel_err"
 }

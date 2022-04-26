@@ -8,7 +8,7 @@
 
 ::anorm:: 
 
-An another ORM framework implementation using the new way for Go.
+An another generic ORM framework implementation using the new way for Go.
 
 {{ Version @VER }}
 
@@ -24,15 +24,6 @@ An another ORM framework implementation using the new way for Go.
 [![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)
 [![Release](https://img.shields.io/github/release/go-the-way/anorm.svg?style=flat-square)](https://github.com/go-the-way/anorm/releases)
 
-### Features
-
-- Database: supports all implementation Go `sql` pkg.
-- Model: supports union primary key.
-- Model: supports join ref table(such as: inner, left, right, ...etc)
-- Model: table definition, auto migrate(column def, index def, key def, index def, ...etc).
-- Plugin: pagination plugin(MySQL provided).
-- Insert: provides batch insert method.
-
 ### Quickstart
 
 ```go
@@ -41,7 +32,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	
+
 	a "github.com/go-the-way/anorm"
 )
 
@@ -55,11 +46,9 @@ type Person struct {
 	Name string `orm:"pk{F} c{name} def{name varchar(20) not null default 'Coco' comment 'Name'}"`
 }
 
-func (p *Person) MetaData() *a.ModelMeta {
-	return &a.ModelMeta{
-		Migrate: true,
-		Comment: "Table of Person",
-	}
+func (p *Person) Configure(c *a.EC) {
+	c.Migrate = true
+	c.Table = "Table of Person"
 }
 
 func main() {
@@ -68,10 +57,10 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	a.DS(db)
+	a.DataSourcePool.Push(db)
 	a.Register(new(Person))
 	o := a.New(new(Person))
-	count, err := o.SelectCount().Exec(nil)
+	count, err := o.OpsForSelectCount().Exec(nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {

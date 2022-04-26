@@ -21,15 +21,15 @@ func init() {
 
 func TestDeleteExec(t *testing.T) {
 	truncateTestTable()
-	o := New(new(userModel))
+	o := New(new(userEntity))
 	{
 		if err := insertTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if _, err := o.OpsForDelete().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelCount() != 0 {
+		if selectUserEntityCount() != 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -37,10 +37,10 @@ func TestDeleteExec(t *testing.T) {
 		if err := insertTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().Where(getTestGes()...).Exec(nil); err != nil {
+		if _, err := o.OpsForDelete().Where(getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelCount() != 0 {
+		if selectUserEntityCount() != 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -48,10 +48,13 @@ func TestDeleteExec(t *testing.T) {
 		if err := insertTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().Exec(getTest()); err != nil {
+
+		Logger.SetLogLevel(LogLevelDebug)
+
+		if _, err := o.OpsForDelete().Exec(getTest()); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelCount() != 0 {
+		if c := selectUserEntityCount(); c != 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -59,15 +62,15 @@ func TestDeleteExec(t *testing.T) {
 
 func TestDeleteExec2(t *testing.T) {
 	truncateTestNullTable()
-	o := New(new(userModelNull))
+	o := New(new(userEntityNull))
 	{
 		if err := insertNullTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if _, err := o.OpsForDelete().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelNullCount() > 0 {
+		if selectUserEntityNullCount() > 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -75,10 +78,10 @@ func TestDeleteExec2(t *testing.T) {
 		if err := insertNullTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().Where(getTestGes()...).Exec(nil); err != nil {
+		if _, err := o.OpsForDelete().Where(getTestGes()...).Exec(nil); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelNullCount() > 0 {
+		if selectUserEntityNullCount() > 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -86,10 +89,10 @@ func TestDeleteExec2(t *testing.T) {
 		if err := insertNullTest(); err != nil {
 			t.Fatalf("TestDeleteExec prepare insert failed: %v\n", err)
 		}
-		if _, err := o.Delete().Exec(getNullTest()); err != nil {
+		if _, err := o.OpsForDelete().Exec(getNullTest()); err != nil {
 			t.Fatalf("TestDeleteExec failed: %v\n", err)
 		}
-		if selectUserModelNullCount() > 0 {
+		if selectUserEntityNullCount() > 0 {
 			t.Fatal("TestDeleteExec failed!")
 		}
 	}
@@ -97,20 +100,20 @@ func TestDeleteExec2(t *testing.T) {
 
 func TestDeleteExecTX(t *testing.T) {
 	truncateTestTable()
-	o := New(new(userModel))
+	o := New(new(userEntity))
 	if err := insertTest(); err != nil {
 		t.Fatalf("TestDeleteExecTX prepare insert failed: %v\n", err)
 	}
-	if err := o.Begin(); err != nil {
+	if err := o.BeginTx(TxManager()); err != nil {
 		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
 	}
-	if _, err := o.Delete().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+	if _, err := o.OpsForDelete().IfWhere(false).IfWhere(true, getTestGes()...).IfOnlyWhere(false).IfOnlyWhere(true, getTestGes()...).Exec(nil); err != nil {
 		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
 	}
-	if err := o.Commit(); err != nil {
+	if err := o.txm.Commit(); err != nil {
 		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
 	}
-	if selectUserModelCount() != 0 {
+	if selectUserEntityCount() != 0 {
 		t.Fatalf("TestDeleteExecTX failed!")
 	}
 }

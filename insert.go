@@ -18,37 +18,36 @@ import (
 	"github.com/go-the-way/sg"
 )
 
-type (
-	_Insert struct {
-		orm           *orm
-		ignoreColumns []sg.C
-	}
-)
-
-func newInsert(o *orm) *_Insert {
-	return &_Insert{orm: o, ignoreColumns: make([]sg.C, 0)}
+type insertOperation[E Entity] struct {
+	orm           *Orm[E]
+	ignoreColumns []sg.C
 }
 
-func (o *_Insert) Ignore(columns ...sg.C) *_Insert {
+func newInsertOperation[E Entity](o *Orm[E]) *insertOperation[E] {
+	return &insertOperation[E]{orm: o, ignoreColumns: make([]sg.C, 0)}
+}
+
+// Ignore add ignore when inserts
+func (o *insertOperation[E]) Ignore(columns ...sg.C) *insertOperation[E] {
 	o.ignoreColumns = append(o.ignoreColumns, columns...)
 	return o
 }
 
-func (o *_Insert) getIgnoreMap() map[string]struct{} {
-	ignoreMap := modelInsertIgnoreMap[getModelPkgName(o.orm.model)]
+func (o *insertOperation[E]) getIgnoreMap() map[string]struct{} {
+	ignoreMap := entityInsertIgnoreMap[getEntityPkgName(o.orm.entity)]
 	for _, c := range o.ignoreColumns {
 		ignoreMap[string(c)] = struct{}{}
 	}
 	return ignoreMap
 }
 
-func (o *_Insert) getInsertBuilder(models ...Model) (string, []interface{}) {
-	fields := modelFieldMap[getModelPkgName(o.orm.model)]
-	fieldColumnMap := modelFieldColumnMap[getModelPkgName(o.orm.model)]
+func (o *insertOperation[E]) getInsertBuilder(entities ...E) (string, []any) {
+	fields := entityFieldMap[getEntityPkgName(o.orm.entity)]
+	fieldColumnMap := entityFieldColumnMap[getEntityPkgName(o.orm.entity)]
 	ignoreMap := o.getIgnoreMap()
 	builder := sg.InsertBuilder()
-	for i, model := range models {
-		rt := reflect.ValueOf(model).Elem()
+	for i, entity := range entities {
+		rt := reflect.ValueOf(entity).Elem()
 		argGes := make([]sg.Ge, 0)
 		for _, f := range fields {
 			if _, have := ignoreMap[fieldColumnMap[f]]; have {
@@ -61,14 +60,14 @@ func (o *_Insert) getInsertBuilder(models ...Model) (string, []interface{}) {
 			argGes = append(argGes, sg.Arg(val))
 		}
 
-		if len(models) == 1 {
+		if len(entities) == 1 {
 			builder.Value(sg.NewJoiner(argGes, ", ", "", "", false))
 			continue
 		}
 
 		if i == 0 {
 			builder.Value(sg.NewJoiner(argGes, ", ", "", ")", false))
-		} else if i == len(models)-1 {
+		} else if i == len(entities)-1 {
 			builder.Value(sg.NewJoiner(argGes, ", ", "(", "", false))
 		} else {
 			builder.Value(sg.NewJoiner(argGes, ", ", "(", ")", false))
@@ -77,22 +76,19 @@ func (o *_Insert) getInsertBuilder(models ...Model) (string, []interface{}) {
 	return builder.Table(o.orm.table()).Build()
 }
 
-func (o *_Insert) Exec(model Model) error {
+func (o *insertOperation[E]) Exec(entity E) error {
 	var (
 		result sql.Result
 		err    error
 	)
-	sqlStr, ps := o.getInsertBuilder(model)
-	execInsertHookersBefore(model, &sqlStr, &ps)
-	if debug() {
-		(&execLog{"Insert.Exec", sqlStr, ps}).Log()
-	}
+	sqlStr, ps := o.getInsertBuilder(entity)
+	queryLog("OpsForInsert.Exec", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	execInsertHookersAfter(model, sqlStr, ps, err)
+	queryErrorLog("OpsForInsert.Exec", sqlStr, ps, err)
 	if err != nil {
 		return err
 	}
@@ -101,11 +97,11 @@ func (o *_Insert) Exec(model Model) error {
 		lastInsertId, _ = result.LastInsertId()
 	}
 	if lastInsertId > 0 {
-		pks := modelPKMap[getModelPkgName(model)]
+		pks := entityPKMap[getEntityPkgName(entity)]
 		if pks != nil && len(pks) == 1 {
-			pkField := modelColumnFieldMap[getModelPkgName(model)][pks[0]]
+			pkField := entityColumnFieldMap[getEntityPkgName(entity)][pks[0]]
 			if pkField != "" {
-				value := reflect.ValueOf(model).Elem().FieldByName(pkField)
+				value := reflect.ValueOf(entity).Elem().FieldByName(pkField)
 				if value.CanSet() {
 					if value.Kind() >= reflect.Int && value.Kind() <= reflect.Int64 {
 						value.SetInt(lastInsertId)
@@ -119,9 +115,9 @@ func (o *_Insert) Exec(model Model) error {
 	return nil
 }
 
-func (o *_Insert) ExecList(ignoreError bool, models ...Model) error {
+func (o *insertOperation[E]) ExecList(ignoreError bool, entities ...E) error {
 	var err error
-	for _, m := range models {
+	for _, m := range entities {
 		err = o.Exec(m)
 		if !ignoreError && err != nil {
 			return err
@@ -130,33 +126,28 @@ func (o *_Insert) ExecList(ignoreError bool, models ...Model) error {
 	return err
 }
 
-func (o *_Insert) ExecBatch(models ...Model) (int64, error) {
-	if len(models) <= 0 {
+func (o *insertOperation[E]) ExecBatch(entities ...E) (int64, error) {
+	if len(entities) <= 0 {
 		return 0, nil
 	}
 	var (
 		result sql.Result
 		err    error
 	)
-	sqlStr, ps := o.getInsertBuilder(models...)
-	if debug() {
-		(&execLog{"Insert.ExecBatch", sqlStr, ps}).Log()
-	}
-	execInsertHookersBefore(models[0], &sqlStr, &ps)
+	sqlStr, ps := o.getInsertBuilder(entities...)
+	queryLog("OpsForInsert.ExecBatch", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	execInsertHookersAfter(models[0], sqlStr, ps, err)
+	queryErrorLog("OpsForInsert.ExecBatch", sqlStr, ps, err)
 	if err != nil {
 		return 0, err
 	}
 	ra := int64(0)
 	if result != nil {
-		if a, aErr := result.RowsAffected(); aErr != nil {
-			ra = a
-		}
+		ra, _ = result.RowsAffected()
 	}
 	return ra, err
 }

@@ -76,6 +76,16 @@ func (o *insertOperation[E]) getInsertBuilder(entities ...E) (string, []any) {
 	return builder.Table(o.orm.table()).Build()
 }
 
+// Exec exec insert one entity
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - err: exec error
+//
 func (o *insertOperation[E]) Exec(entity E) error {
 	var (
 		result sql.Result
@@ -115,6 +125,18 @@ func (o *insertOperation[E]) Exec(entity E) error {
 	return nil
 }
 
+// ExecList exec list entity, each entity call Exec(entity Entity) error
+//
+// Params:
+//
+// - ignoreError: if true, any insert error does not terminate
+//
+// - entities: the orm wrapper entity list
+//
+// Returns:
+//
+// - err: exec error
+//
 func (o *insertOperation[E]) ExecList(ignoreError bool, entities ...E) error {
 	var err error
 	for _, m := range entities {
@@ -126,14 +148,23 @@ func (o *insertOperation[E]) ExecList(ignoreError bool, entities ...E) error {
 	return err
 }
 
-func (o *insertOperation[E]) ExecBatch(entities ...E) (int64, error) {
+// ExecBatch exec list entity, use batch mode
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - count: RowsAffected count
+//
+// - err: exec error
+//
+func (o *insertOperation[E]) ExecBatch(entities ...E) (count int64, err error) {
 	if len(entities) <= 0 {
 		return 0, nil
 	}
-	var (
-		result sql.Result
-		err    error
-	)
+	var result sql.Result
 	sqlStr, ps := o.getInsertBuilder(entities...)
 	queryLog("OpsForInsert.ExecBatch", sqlStr, ps)
 	if o.orm.openTx {

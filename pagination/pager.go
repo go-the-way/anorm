@@ -28,7 +28,11 @@ var (
 	MySql = &mysql{}
 	// Pg define pgsql pager
 	//
-	// TODO:
+	// SELECT t.* FROM (...) LIMIT ? OFFSET ?
+	//
+	// $1: size
+	//
+	// $2: offset
 	Pg = &pg{}
 	// SqlServer tells orm how to use ROW_NUMBER()
 	//

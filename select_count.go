@@ -24,6 +24,7 @@ func newSelectCountOperation[E Entity](o *Orm[E]) *selectCountOperation[E] {
 	return &selectCountOperation[E]{orm: o, wheres: make([]sg.Ge, 0)}
 }
 
+// IfWhere if cond is true, append wheres
 func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectCountOperation[E] {
 	if cond {
 		return o.Where(wheres...)
@@ -31,6 +32,7 @@ func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectCou
 	return o
 }
 
+// Where append wheres
 func (o *selectCountOperation[E]) Where(wheres ...sg.Ge) *selectCountOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
@@ -44,6 +46,18 @@ func (o *selectCountOperation[E]) appendWhereGes(entity E) {
 	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
+// Exec select count
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - count: rows count
+//
+// - err: exec error
+//
 func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
 	o.appendWhereGes(entity)
 	sqlStr, ps := sg.SelectBuilder().

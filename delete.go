@@ -69,12 +69,20 @@ func (o *deleteOperation[E]) getDeleteBuilder(entity E) (string, []any) {
 	return builder.Build()
 }
 
-// Exec exec delete ops
-func (o *deleteOperation[E]) Exec(entity E) (int64, error) {
-	var (
-		result sql.Result
-		err    error
-	)
+// Exec delete entities
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - count: RowsAffected count
+//
+// - err: exec error
+//
+func (o *deleteOperation[E]) Exec(entity E) (count int64, err error) {
+	var result sql.Result
 	sqlStr, ps := o.getDeleteBuilder(entity)
 	queryLog("OpsForDelete.Exec", sqlStr, ps)
 	if o.orm.openTx {

@@ -30,6 +30,7 @@ func newSelectOperation[E Entity](o *Orm[E]) *selectOperation[E] {
 	return &selectOperation[E]{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
 }
 
+// Join enable join query
 func (o *selectOperation[E]) Join() *selectOperation[E] {
 	o.join = true
 	return o
@@ -86,6 +87,7 @@ func (o *selectOperation[E]) getTableName() sg.Ge {
 	return sg.T(entityTableMap[getEntityPkgName(o.orm.entity)])
 }
 
+// IfWhere if cond is true append wheres
 func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectOperation[E] {
 	if cond {
 		return o.Where(wheres...)
@@ -93,11 +95,13 @@ func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectOperatio
 	return o
 }
 
+// Where append wheres
 func (o *selectOperation[E]) Where(wheres ...sg.Ge) *selectOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
+// OrderBy append OrderBys
 func (o *selectOperation[E]) OrderBy(orderBys ...sg.Ge) *selectOperation[E] {
 	o.orderBys = append(o.orderBys, orderBys...)
 	return o
@@ -107,6 +111,18 @@ func (o *selectOperation[E]) appendWhereGes(entity E) {
 	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
+// ExecOne select for one return
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - e: return one entity
+//
+// - err: exec error
+//
 func (o *selectOperation[E]) ExecOne(entity E) (e E, err error) {
 	if es, err2 := o.Exec(entity); err2 == nil && len(es) > 0 {
 		e = es[0]
@@ -116,6 +132,18 @@ func (o *selectOperation[E]) ExecOne(entity E) (e E, err error) {
 	return
 }
 
+// Exec select for entities
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - entities: entities
+//
+// - err: exec error
+//
 func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 	o.appendWhereGes(entity)
 	selectBuilder := sg.SelectBuilder().
@@ -140,6 +168,26 @@ func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 	return scanStruct(rows, o.orm.entity)
 }
 
+// ExecPage select for page
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// - pager: the pager see pkg pagination
+//
+// - offset: start index
+//
+// - size: select size
+//
+// Returns:
+//
+// - entities: entities
+//
+// - total: total rows size
+//
+// - err: exec error
+//
 func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
 	sc := o.orm.OpsForSelectCount()
 	sc.wheres = append(sc.wheres, o.wheres...)

@@ -29,11 +29,13 @@ func newUpdateOperation[E Entity](o *Orm[E]) *updateOperation[E] {
 	return &updateOperation[E]{orm: o, ignoreColumns: make([]sg.C, 0), wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
 }
 
+// Ignore ignore columns for updates
 func (o *updateOperation[E]) Ignore(columns ...sg.C) *updateOperation[E] {
 	o.ignoreColumns = append(o.ignoreColumns, columns...)
 	return o
 }
 
+// Set if set only set columns
 func (o *updateOperation[E]) Set(columns ...sg.C) *updateOperation[E] {
 	o.setColumns = append(o.setColumns, columns...)
 	return o
@@ -55,6 +57,7 @@ func (o *updateOperation[E]) getSetMap() map[string]struct{} {
 	return setMap
 }
 
+// IfWhere if cond is true, append wheres
 func (o *updateOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *updateOperation[E] {
 	if cond {
 		return o.Where(wheres...)
@@ -62,6 +65,7 @@ func (o *updateOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *updateOperatio
 	return o
 }
 
+// IfOnlyWhere if cond is true, append only wheres
 func (o *updateOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) *updateOperation[E] {
 	if cond {
 		return o.OnlyWhere(wheres...)
@@ -69,11 +73,13 @@ func (o *updateOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) *updateOper
 	return o
 }
 
+// Where append wheres
 func (o *updateOperation[E]) Where(wheres ...sg.Ge) *updateOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
+// OnlyWhere append only wheres
 func (o *updateOperation[E]) OnlyWhere(wheres ...sg.Ge) *updateOperation[E] {
 	o.onlyWheres = append(o.onlyWheres, wheres...)
 	return o
@@ -123,6 +129,18 @@ func (o *updateOperation[E]) getUpdateBuilder(entity E) (string, []any) {
 	return builder.Set(setGes...).Where(sg.AndGroup(whereGes...)).Update(o.orm.table()).Build()
 }
 
+// Exec select for page
+//
+// Params:
+//
+// - entity: the orm wrapper entity
+//
+// Returns:
+//
+// - count: RowsAffected count
+//
+// - err: exec error
+//
 func (o *updateOperation[E]) Exec(entity E) (count int64, err error) {
 	var result sql.Result
 	sqlStr, ps := o.getUpdateBuilder(entity)

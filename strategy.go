@@ -15,15 +15,15 @@ type Strategy int
 
 const (
 	// Default defines default not changed
-	// EntityConfigurator:User  => Table:User
-	// Field:UserName  => Column:UserName
+	//
+	// UserName  => UserName
 	Default Strategy = iota
 	// Underline defines to transform a underline style name
-	// EntityConfigurator:UserEntity => Table:user_entity
-	// Field:UserName => Column:user_name
+	//
+	// UserName => user_name
 	Underline
 	// CamelCase defines to transform a camelcase style name
-	// EntityConfigurator:UserEntity => Table:userEntity
-	// Field:UserName => Column:userName
+	//
+	// UserName => userName
 	CamelCase
 )

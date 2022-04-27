@@ -49,12 +49,27 @@ func (o *selectOperation[E]) getColumns() []sg.Ge {
 	return columnGes
 }
 
+type funcGe struct {
+	define string
+	args   []any
+}
+
+func newFuncGe(define string, args ...any) *funcGe {
+	return &funcGe{define: define, args: args}
+}
+
+func (f *funcGe) SQL() (string, []interface{}) {
+	// IFNULL(t.name, ?), []any{""}
+	return f.define, f.args
+}
+
 func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	columnGes := make([]sg.Ge, 0)
 	joinGs := make([]sg.Ge, 0)
 	refCount := 1
 	refTableMap := make(map[string]string, 0)
 	if joinRefMap, have := entityJoinRefMap[getEntityPkgName(o.orm.entity)]; have && o.join {
+		joinNullMap, nullHave := entityJoinNullMap[getEntityPkgName(o.orm.entity)]
 		// append join column
 		for k, v := range joinRefMap {
 			relAlias, joined := refTableMap[v.RelTable]
@@ -63,8 +78,17 @@ func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 				refTableMap[v.RelTable] = relAlias
 				refCount++
 			}
-			// rel_table.rel_column AS RelColumn
-			columnGes = append(columnGes, sg.Alias(sg.C(relAlias+"."+v.RelName), k))
+
+			// add: null function
+			if nullHave && joinNullMap[k] != nil {
+				jn := joinNullMap[k]
+				// IFNULL(rel1.name, 'defaultVal') AS alias
+				columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, ?)", jn.FuncName, relAlias+"."+v.RelName), jn.DefaultVal), k))
+			} else {
+				// rel_table.rel_column AS RelColumn
+				columnGes = append(columnGes, sg.Alias(sg.C(relAlias+"."+v.RelName), k))
+			}
+
 			// LEFT JOIN rel_table ON rel_table.rel_id = t.self_id
 			if !joined {
 				joinGs = append(joinGs, sg.NewJoiner(

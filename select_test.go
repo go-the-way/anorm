@@ -279,9 +279,8 @@ func TestSelectJoin(t *testing.T) {
 
 type (
 	_JoinMaster struct {
-		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
-		Name string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
-
+		ID      int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name    string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
 		RelID   int    `orm:"c{rel_id} def{rel_id int}"`
 		RelName string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name}"`
 	}
@@ -305,6 +304,7 @@ type (
 func (_ *_JoinMaster) Configure(c *EC) {
 	c.Migrate = true
 	c.Table = "join_master"
+	c.JoinNulls = map[string]*JoinNull{"RelName": {"RelName", "IFNULL", ""}}
 }
 
 func (_ *_JoinRel) Configure(c *EC) {

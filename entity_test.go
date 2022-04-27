@@ -48,7 +48,7 @@ func (_ *_Entity) Configure(c *EC) {
 	c.PrimaryKeyColumns = []sg.C{"id"}
 	c.ColumnDefinitions = []sg.Ge{sg.ColumnDefinition(sg.C("name2"), sg.C("varchar(20)"), true, false, false, "", "Name2")}
 	c.UpdateIgnores = []sg.C{"name3"}
-	c.JoinRefMap = map[string]*JoinRef{
+	c.JoinRefs = map[string]*JoinRef{
 		"JoinName": {
 			Field:      "JoinName",
 			Type:       "left",
@@ -56,6 +56,13 @@ func (_ *_Entity) Configure(c *EC) {
 			RelTable:   "join",
 			RelID:      "id",
 			RelName:    "name",
+		},
+	}
+	c.JoinNulls = map[string]*JoinNull{
+		"JoinName": {
+			Field:      "JoinName",
+			FuncName:   "IFNULL",
+			DefaultVal: "",
 		},
 	}
 }

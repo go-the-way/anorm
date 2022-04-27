@@ -26,17 +26,18 @@ var (
 	errEntityMetadataNil       = errors.New("anorm: entity's metadata is nil")
 	errDuplicateRegisterEntity = errors.New("anorm: duplicate register entity")
 
-	entityTableMap        = make(map[string]string)              // K<entityPKGName> V<TableName>
-	entityTagMap          = make(map[string]map[string]*tag)     // K<entityPKGName> V< K<ColumnName> V<*Tag> >
-	entityColumnMap       = make(map[string][]string)            // K<entityPKGName> V<[]Column>
-	entityFieldMap        = make(map[string][]string)            // K<entityPKGName> V<[]Column>
-	entityFieldColumnMap  = make(map[string]map[string]string)   // K<entityPKGName> V< K<Field> V<Column> >
-	entityColumnFieldMap  = make(map[string]map[string]string)   // K<entityPKGName> V< K<Column> V<Field> >
-	entityInsertIgnoreMap = make(map[string]map[string]struct{}) // K<entityPKGName> V< K<Column> V<> >
-	entityUpdateIgnoreMap = make(map[string]map[string]struct{}) // K<entityPKGName> V< K<Column> V<> >
-	entityJoinRefMap      = make(map[string]map[string]*JoinRef) // K<entityPKGName> V< K<Field> V<> >
-	entityPKMap           = make(map[string][]string, 0)         // K<entityPKGName> V<[]PKColumn>
-	entityDSMap           = make(map[string]string, 0)           // K<entityPKGName> V<DS>
+	entityTableMap        = make(map[string]string)               // K<entityPKGName> V<TableName>
+	entityTagMap          = make(map[string]map[string]*tag)      // K<entityPKGName> V< K<ColumnName> V<*Tag> >
+	entityColumnMap       = make(map[string][]string)             // K<entityPKGName> V<[]Column>
+	entityFieldMap        = make(map[string][]string)             // K<entityPKGName> V<[]Column>
+	entityFieldColumnMap  = make(map[string]map[string]string)    // K<entityPKGName> V< K<Field> V<Column> >
+	entityColumnFieldMap  = make(map[string]map[string]string)    // K<entityPKGName> V< K<Column> V<Field> >
+	entityInsertIgnoreMap = make(map[string]map[string]struct{})  // K<entityPKGName> V< K<Column> V<> >
+	entityUpdateIgnoreMap = make(map[string]map[string]struct{})  // K<entityPKGName> V< K<Column> V<> >
+	entityJoinRefMap      = make(map[string]map[string]*JoinRef)  // K<entityPKGName> V< K<Field> V<> >
+	entityJoinNullMap     = make(map[string]map[string]*JoinNull) // K<entityPKGName> V< K<Field> V<> >
+	entityPKMap           = make(map[string][]string, 0)          // K<entityPKGName> V<[]PKColumn>
+	entityDSMap           = make(map[string]string, 0)            // K<entityPKGName> V<DS>
 )
 
 type (
@@ -78,8 +79,10 @@ type (
 		InsertIgnores []sg.C
 		// UpdateIgnores defines Table update ignore columns
 		UpdateIgnores []sg.C
-		// JoinRefMap defines Table join rel table
-		JoinRefMap map[string]*JoinRef
+		// JoinRefs defines Table join rel table
+		JoinRefs map[string]*JoinRef
+		// JoinNulls defines Table join transform
+		JoinNulls map[string]*JoinNull
 	}
 
 	tag struct {
@@ -99,6 +102,12 @@ type (
 		RelID      string // rel_id
 		RelName    string // rel_name
 	}
+
+	JoinNull struct {
+		Field      string // SelfID
+		FuncName   string // mysql: IFNULL, sqlserver: ISNULL, ...
+		DefaultVal any    // 0 ,"", ...
+	}
 )
 
 func (t *tag) String() string {
@@ -117,6 +126,7 @@ func Register(entity Entity) {
 	insertIgnoreMap := make(map[string]struct{}, 0)
 	updateIgnoreMap := make(map[string]struct{}, 0)
 	joinRefMap := make(map[string]*JoinRef, 0)
+	joinNullMap := make(map[string]*JoinNull, 0)
 	tagMap := make(map[string]*tag, 0)
 	fields := make([]string, 0)
 	columns := make([]string, 0)
@@ -210,9 +220,15 @@ func Register(entity Entity) {
 		}
 	}
 
-	if vs := c.JoinRefMap; vs != nil {
+	if vs := c.JoinRefs; vs != nil {
 		for k, v := range vs {
 			joinRefMap[k] = v
+		}
+	}
+
+	if vs := c.JoinNulls; vs != nil {
+		for k, v := range vs {
+			joinNullMap[k] = v
 		}
 	}
 
@@ -232,6 +248,7 @@ func Register(entity Entity) {
 	entityInsertIgnoreMap[entityPkgName] = insertIgnoreMap
 	entityUpdateIgnoreMap[entityPkgName] = updateIgnoreMap
 	entityJoinRefMap[entityPkgName] = joinRefMap
+	entityJoinNullMap[entityPkgName] = joinNullMap
 	entityPKMap[entityPkgName] = pks
 	if c.DS == "" {
 		c.DS = "_"

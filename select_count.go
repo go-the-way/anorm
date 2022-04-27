@@ -62,7 +62,7 @@ func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
 	o.appendWhereGes(entity)
 	sqlStr, ps := sg.SelectBuilder().
 		Select(sg.Alias(sg.C("count(0)"), "c")).
-		From(o.getTableName()).
+		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
 		Build()
 	queryLog("OpsForSelectCount.Exec", sqlStr, ps)

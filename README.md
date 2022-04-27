@@ -74,8 +74,8 @@ func main() {
 | TagName | PropertyName | Description            | Default      | Example                                              |
 |---------|--------------|------------------------|--------------|------------------------------------------------------|
 | pk      | PK           | Table primary key      | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
-| ig      | InsertIgnore | Ignore when inserts    | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
-| ug      | UpdateIgnore | Ignore when updates    | false        | pk{1},pk{t},pk{T},pk{true},pk{TRUE},pk{True}         |
+| ig      | InsertIgnore | Ignore when inserts    | false        | ig{1},ig{t},ig{T},ig{true},ig{TRUE},ig{True}         |
+| ug      | UpdateIgnore | Ignore when updates    | false        | ug{1},ug{t},ug{T},ug{true},ug{TRUE},ug{True}         |
 | c       | Column       | Struct property column | propertyName | c{id},c{hello_world},c{halo_1234},c{WorldHa}         |
 | def     | Definition   | Column definition SQL  |              | def{address varchar(100) not null comment 'Address'} |
 | join    | JoinRef      | Join Ref definition    |              | join{inner,self_id,rel_table,rel_id,rel_name}        |

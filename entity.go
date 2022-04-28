@@ -292,12 +292,15 @@ func migrate(entity Entity, c *EC, pkGes []sg.Ge, columnGes []sg.Ge) {
 
 	builder := sg.CreateTableBuilder().
 		Table(sg.T(c.Table)).
-		Comment(c.Comment).
 		PrimaryKey(pkGes...).
 		ColumnDefinition(columnGes...)
 
 	if c.IFNotExists {
 		builder.IfNotExist()
+	}
+
+	if c.Commented {
+		builder.Commented().Comment(c.Comment)
 	}
 
 	if is := c.IndexDefinitions; is != nil && len(is) > 0 {

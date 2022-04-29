@@ -11,7 +11,9 @@
 
 package anorm
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGetStrategyName(t *testing.T) {
 	if s := getStrategyName("ABC", Underline); s != "a_b_c" {
@@ -39,13 +41,30 @@ type _scanStruct struct {
 func (_ *_scanStruct) Configure(c *EC) {
 }
 
+type _tStruct struct {
+	T string
+}
+
+func (_ *_tStruct) Configure(c *EC) {
+
+}
+
 func TestScanStruct(t *testing.T) {
+	{
+		if rows, err := testDB.Query("select now() as T"); err != nil {
+			t.Error("TestScanStruct failed")
+		} else {
+			if _, err2 := ScanStruct(rows, new(_tStruct), func(entity EntityConfigurator) {}); err2 != nil {
+				t.Error("TestScanStruct failed")
+			}
+		}
+	}
 	{
 		if rows, err := testDB.Query("select now() as t"); err != nil {
 			t.Error("TestScanStruct failed")
 		} else {
 			_ = rows.Close()
-			if _, err2 := scanStruct(rows, new(_scanStruct)); err2 == nil {
+			if _, err2 := ScanStruct(rows, new(_scanStruct), func(entity EntityConfigurator) {}); err2 == nil {
 				t.Error("TestScanStruct failed")
 			}
 		}
@@ -54,7 +73,7 @@ func TestScanStruct(t *testing.T) {
 		if rows, err := testDB.Query("select NULL as Name,111 as Name2"); err != nil {
 			t.Error("TestScanStruct failed")
 		} else {
-			if _, err2 := scanStruct(rows, new(_scanStruct)); err2 == nil {
+			if _, err2 := ScanStruct(rows, new(_scanStruct), func(entity EntityConfigurator) {}); err2 == nil {
 				t.Error("TestScanStruct failed")
 			}
 		}

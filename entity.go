@@ -26,19 +26,20 @@ var (
 	errEntityMetadataNil       = errors.New("anorm: entity's metadata is nil")
 	errDuplicateRegisterEntity = errors.New("anorm: duplicate register entity")
 
-	entityTableMap         = make(map[string]string)                // K<entityPKGName> V<TableName>
-	entityTagMap           = make(map[string]map[string]*tag)       // K<entityPKGName> V< K<ColumnName> V<*Tag> >
-	entityColumnMap        = make(map[string][]string)              // K<entityPKGName> V<[]Column>
-	entityFieldMap         = make(map[string][]string)              // K<entityPKGName> V<[]Column>
-	entityFieldColumnMap   = make(map[string]map[string]string)     // K<entityPKGName> V< K<Field> V<Column> >
-	entityColumnFieldMap   = make(map[string]map[string]string)     // K<entityPKGName> V< K<Column> V<Field> >
-	entityInsertIgnoreMap  = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
-	entityUpdateIgnoreMap  = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
-	entityNullFieldMap     = make(map[string]map[string]*NullField) // K<entityPKGName> V< K<Field> V<*NullField> >
-	entityJoinRefMap       = make(map[string]map[string]*JoinRef)   // K<entityPKGName> V< K<Field> V<*JoinRef> >
-	entityJoinNullFieldMap = make(map[string]map[string]*NullField) // K<entityPKGName> V< K<Field> V<*NullField> >
-	entityPKMap            = make(map[string][]string, 0)           // K<entityPKGName> V<[]PKColumn>
-	entityDSMap            = make(map[string]string, 0)             // K<entityPKGName> V<DS>
+	entityTableMap         = make(map[string]string)                          // K<entityPKGName> V<TableName>
+	entityTagMap           = make(map[string]map[string]*tag)                 // K<entityPKGName> V< K<ColumnName> V<*Tag> >
+	entityColumnMap        = make(map[string][]string)                        // K<entityPKGName> V<[]Column>
+	entityFieldMap         = make(map[string][]string)                        // K<entityPKGName> V<[]Column>
+	entityFieldColumnMap   = make(map[string]map[string]string)               // K<entityPKGName> V< K<Field> V<Column> >
+	entityColumnFieldMap   = make(map[string]map[string]string)               // K<entityPKGName> V< K<Column> V<Field> >
+	entityInsertIgnoreMap  = make(map[string]map[string]struct{})             // K<entityPKGName> V< K<Column> V<> >
+	entityUpdateIgnoreMap  = make(map[string]map[string]struct{})             // K<entityPKGName> V< K<Column> V<> >
+	entityNullFieldMap     = make(map[string]map[string]*NullField)           // K<entityPKGName> V< K<Field> V<*NullField> >
+	entityJoinRefMap       = make(map[string]map[string]*JoinRef)             // K<entityPKGName> V< K<Field> V<*JoinRef> >
+	entityJoinNullFieldMap = make(map[string]map[string]*NullField)           // K<entityPKGName> V< K<Field> V<*NullField> >
+	entityPKMap            = make(map[string][]string, 0)                     // K<entityPKGName> V<[]PKColumn>
+	entityDSMap            = make(map[string]string, 0)                       // K<entityPKGName> V<DS>
+	entityComplete         = make(map[string]func(entity EntityConfigurator)) // K<entityPKGName> V<func(EntityConfigurator)>
 )
 
 type (
@@ -86,6 +87,8 @@ type (
 		JoinNullFields map[string]*NullField
 		// NullFields defines Table null fields
 		NullFields map[string]*NullField
+		// Complete called when entity setup complete
+		Complete func(entity EntityConfigurator)
 	}
 
 	tag struct {
@@ -174,29 +177,30 @@ func Register(entity Entity) {
 			pk = curTag.PK
 			join = curTag.Join
 			Logger.Debug([]*logField{LogField("entity", reflect.TypeOf(entity)), LogField("tag", curTag.String())}, "parsed")
-		}
-		if pk {
-			pks = append(pks, column)
-			pkGes = append(pkGes, sg.C(column))
-		}
-		if column == "" {
-			column = getStrategyName(fieldName, c.ColumnNameStrategy)
-		}
-		if columnDefinition != "" {
-			columnGes = append(columnGes, sg.C(columnDefinition))
-		}
-		if insertIgnore {
-			insertIgnoreMap[column] = struct{}{}
-		}
-		if updateIgnore {
-			updateIgnoreMap[column] = struct{}{}
-		}
-		setJoinMap(entity, fieldName, curTag, join, joinRefMap)
 
-		fields = append(fields, fieldName)
-		columns = append(columns, column)
-		columnFieldMap[column] = fieldName
-		fieldColumnMap[fieldName] = column
+			if pk {
+				pks = append(pks, column)
+				pkGes = append(pkGes, sg.C(column))
+			}
+			if column == "" {
+				column = getStrategyName(fieldName, c.ColumnNameStrategy)
+			}
+			if columnDefinition != "" {
+				columnGes = append(columnGes, sg.C(columnDefinition))
+			}
+			if insertIgnore {
+				insertIgnoreMap[column] = struct{}{}
+			}
+			if updateIgnore {
+				updateIgnoreMap[column] = struct{}{}
+			}
+			setJoinMap(entity, fieldName, curTag, join, joinRefMap)
+
+			fields = append(fields, fieldName)
+			columns = append(columns, column)
+			columnFieldMap[column] = fieldName
+			fieldColumnMap[fieldName] = column
+		}
 	}
 
 	if vs := c.PrimaryKeyColumns; vs != nil {
@@ -261,9 +265,15 @@ func Register(entity Entity) {
 	entityJoinNullFieldMap[entityPkgName] = joinNullFieldMap
 	entityNullFieldMap[entityPkgName] = nullFieldMap
 	entityPKMap[entityPkgName] = pks
+
+	if cc := c.Complete; cc != nil {
+		entityComplete[entityPkgName] = cc
+	}
+
 	if c.DS == "" {
 		c.DS = "_"
 	}
+
 	entityDSMap[entityPkgName] = c.DS
 
 	if !c.Migrate {

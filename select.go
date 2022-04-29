@@ -223,7 +223,7 @@ func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 		queryErrorLog("OpsForSelect.Exec", sqlStr, ps, err)
 		return
 	}
-	return scanStruct(rows, o.orm.entity)
+	return ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])
 }
 
 // ExecPage select for page
@@ -280,6 +280,6 @@ func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, 
 		queryErrorLog("OpsForSelect.ExecPage", sqlStr, ps, err)
 		return
 	}
-	entities, err = scanStruct(rows, o.orm.entity)
+	entities, err = ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])
 	return
 }

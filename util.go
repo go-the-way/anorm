@@ -54,7 +54,8 @@ func getStrategyName(str string, sty Strategy) string {
 	return str
 }
 
-func scanStruct[E Entity](rows *sql.Rows, entity E) ([]E, error) {
+// ScanStruct scan rows return []E
+func ScanStruct[E Entity](rows *sql.Rows, entity E, complete func(entity EntityConfigurator)) ([]E, error) {
 	defer func() { _ = rows.Close() }()
 	ptr := reflect.TypeOf(entity)
 	result := make([]E, 0)
@@ -63,16 +64,21 @@ func scanStruct[E Entity](rows *sql.Rows, entity E) ([]E, error) {
 	} else {
 		for rows.Next() {
 			structVal := reflect.New(ptr.Elem())
-			if err2 := rows.Scan(newColumnPtr(structVal, columns)...); err2 != nil {
+			if err2 := rows.Scan(NewColumnPtr(structVal, columns)...); err2 != nil {
 				return nil, err2
 			}
-			result = append(result, structVal.Interface().(E))
+			e := structVal.Interface().(E)
+			if complete != nil {
+				complete(e)
+			}
+			result = append(result, e)
 		}
 	}
 	return result, nil
 }
 
-func newColumnPtr(structVal reflect.Value, columns []string) []any {
+// NewColumnPtr return column ptr array
+func NewColumnPtr(structVal reflect.Value, columns []string) []any {
 	pts := make([]any, len(columns))
 	for i, c := range columns {
 		pts[i] = structVal.Elem().FieldByName(c).Addr().Interface()

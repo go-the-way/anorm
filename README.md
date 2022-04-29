@@ -24,6 +24,20 @@ An another generic ORM framework implementation using the new way for Go.
 [![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)
 [![Release](https://img.shields.io/github/release/go-the-way/anorm.svg?style=flat-square)](https://github.com/go-the-way/anorm/releases)
 
+
+### Features
+- DataSourcePool manege
+- Pager implementation
+- More levels logger
+- Support joins
+- Null fields
+- sql.Null types
+- Migrate DDL
+- Column definition
+- Index definition
+- Simple Tx manager
+- Insert batch
+
 ### Quickstart
 
 ```go

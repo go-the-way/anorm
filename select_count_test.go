@@ -62,7 +62,7 @@ func TestNullSelectCountExec(t *testing.T) {
 		}
 	}
 	{
-		if c, err := o.OpsForSelectCount().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if c, err := o.OpsForSelectCount().IfWhere(true, getTestGes()...).join().Exec(nil); err != nil {
 			t.Fatalf("TestNullSelectCountExec failed: %v\n", err)
 		} else if c != 1 {
 			t.Fatal("TestNullSelectCountExec failed!")

@@ -230,7 +230,7 @@ func TestSelectJoin(t *testing.T) {
 
 	{
 		o := New(new(_JoinMaster))
-		if es, err := o.OpsForSelect().Join().Exec(nil); err != nil {
+		if es, err := o.OpsForSelect().Join().CountJoin().Exec(nil); err != nil {
 			t.Error("TestSelectJoin failed")
 		} else if len(es) != 0 {
 			t.Error("TestSelectJoin failed")
@@ -255,7 +255,7 @@ func TestSelectJoin(t *testing.T) {
 		if err := o.OpsForInsert().Exec(&_JoinMaster{0, "hello", "hello", jr.ID, "", ""}); err != nil {
 			t.Error("TestSelectJoin failed")
 		}
-		if es, total, err := o.OpsForSelect().Join().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if es, total, err := o.OpsForSelect().Join().CountJoin().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Error("TestSelectJoin failed")
 		} else if len(es) <= 0 || total <= 0 {
 			t.Error("TestSelectJoin failed")

@@ -19,15 +19,22 @@ import (
 )
 
 type selectOperation[E Entity] struct {
-	orm      *Orm[E]
-	join     bool
-	columns  []sg.Ge
-	wheres   []sg.Ge
-	orderBys []sg.Ge
+	orm       *Orm[E]
+	countJoin bool
+	join      bool
+	columns   []sg.Ge
+	wheres    []sg.Ge
+	orderBys  []sg.Ge
 }
 
 func newSelectOperation[E Entity](o *Orm[E]) *selectOperation[E] {
 	return &selectOperation[E]{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
+}
+
+// CountJoin enable join query
+func (o *selectOperation[E]) CountJoin() *selectOperation[E] {
+	o.countJoin = true
+	return o
 }
 
 // Join enable join query
@@ -240,8 +247,12 @@ func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 // - err: exec error
 //
 func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
+	refColumns, refJoins := o.getJoinRef()
 	sc := o.orm.OpsForSelectCount()
-	sc.wheres = append(sc.wheres, o.wheres...)
+	sc.Where(o.wheres...)
+	if o.countJoin && len(refJoins) > 0 {
+		sc.join(sg.NewJoiner(refJoins, " ", "", "", false))
+	}
 	total, err = sc.Exec(entity)
 	if err != nil {
 		return
@@ -254,7 +265,6 @@ func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, 
 		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
 		OrderBy(o.orderBys...)
-	refColumns, refJoins := o.getJoinRef()
 	if len(refColumns) > 0 {
 		selectBuilder.Select(refColumns...)
 	}

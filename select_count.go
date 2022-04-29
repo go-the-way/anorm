@@ -18,6 +18,7 @@ import (
 type selectCountOperation[E Entity] struct {
 	orm    *Orm[E]
 	wheres []sg.Ge
+	joins  []sg.Ge
 }
 
 func newSelectCountOperation[E Entity](o *Orm[E]) *selectCountOperation[E] {
@@ -35,6 +36,12 @@ func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectCou
 // Where append wheres
 func (o *selectCountOperation[E]) Where(wheres ...sg.Ge) *selectCountOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
+	return o
+}
+
+// Where append wheres
+func (o *selectCountOperation[E]) join(joins ...sg.Ge) *selectCountOperation[E] {
+	o.joins = append(o.joins, joins...)
 	return o
 }
 
@@ -64,6 +71,7 @@ func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
 		Select(sg.Alias(sg.C("count(0)"), "c")).
 		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
+		Join(o.joins...).
 		Build()
 	queryLog("OpsForSelectCount.Exec", sqlStr, ps)
 	row := o.orm.db.QueryRow(sqlStr, ps...)

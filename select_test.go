@@ -218,15 +218,15 @@ func TestSelectNullExecPage(t *testing.T) {
 }
 
 func TestSelectJoin(t *testing.T) {
+	_, _ = DataSourcePool.Required("master").Exec("drop table join_master")
+	_, _ = DataSourcePool.Required("master").Exec("drop table join_rel")
+	_, _ = DataSourcePool.Required("master").Exec("drop table join_master_err")
+	_, _ = DataSourcePool.Required("master").Exec("drop table join_rel_err")
+
 	Register(new(_JoinMaster))
 	Register(new(_JoinRel))
 	Register(new(_JoinMasterError))
 	Register(new(_JoinRelError))
-
-	_, _ = DataSourcePool.Required("master").Exec("truncate table join_master")
-	_, _ = DataSourcePool.Required("master").Exec("truncate table join_rel")
-	_, _ = DataSourcePool.Required("master").Exec("truncate table join_master_err")
-	_, _ = DataSourcePool.Required("master").Exec("truncate table join_rel_err")
 
 	{
 		o := New(new(_JoinMaster))
@@ -252,7 +252,7 @@ func TestSelectJoin(t *testing.T) {
 		if err := New(new(_JoinRel)).OpsForInsert().Exec(jr); err != nil {
 			t.Error("TestSelectJoin failed")
 		}
-		if err := o.OpsForInsert().Exec(&_JoinMaster{0, "hello", jr.ID, ""}); err != nil {
+		if err := o.OpsForInsert().Exec(&_JoinMaster{0, "hello", "hello", jr.ID, "", ""}); err != nil {
 			t.Error("TestSelectJoin failed")
 		}
 		if es, total, err := o.OpsForSelect().Join().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
@@ -279,10 +279,12 @@ func TestSelectJoin(t *testing.T) {
 
 type (
 	_JoinMaster struct {
-		ID      int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
-		Name    string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
-		RelID   int    `orm:"c{rel_id} def{rel_id int}"`
-		RelName string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name}"`
+		ID       int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
+		Name     string `orm:"pk{F} c{name} def{name varchar(20) not null comment 'Name'}"`
+		Name2    string `orm:"pk{F} c{name2} def{name2 varchar(20) not null comment 'Name2'}"`
+		RelID    int    `orm:"c{rel_id} def{rel_id int}"`
+		RelName  string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name}"`
+		RelName2 string `orm:"ig{T} ug{T} join{left,rel_id,join_rel,id,name}"`
 	}
 	_JoinRel struct {
 		ID   int    `orm:"pk{T} c{id} ig{T} def{id int not null auto_increment comment 'ID'}"`
@@ -304,7 +306,12 @@ type (
 func (_ *_JoinMaster) Configure(c *EC) {
 	c.Migrate = true
 	c.Table = "join_master"
-	c.JoinNulls = map[string]*JoinNull{"RelName": {"RelName", "IFNULL", ""}}
+	c.NullFields = map[string]*NullField{
+		"Name":     {"IFNULL", "", true},
+		"Name2":    {"IFNULL", "''", false},
+		"RelName":  {"IFNULL", "", true},
+		"RelName2": {"IFNULL", "''", false},
+	}
 }
 
 func (_ *_JoinRel) Configure(c *EC) {

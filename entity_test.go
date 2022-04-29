@@ -58,13 +58,7 @@ func (_ *_Entity) Configure(c *EC) {
 			RelName:    "name",
 		},
 	}
-	c.JoinNulls = map[string]*JoinNull{
-		"JoinName": {
-			Field:      "JoinName",
-			FuncName:   "IFNULL",
-			DefaultVal: "",
-		},
-	}
+	c.NullFields = map[string]*NullField{"JoinName": {"IFNULL", "", true}}
 }
 
 func (_ *_ErrorEntity) Configure(c *EC) {

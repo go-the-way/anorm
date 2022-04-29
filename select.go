@@ -38,12 +38,27 @@ func (o *selectOperation[E]) Join() *selectOperation[E] {
 
 func (o *selectOperation[E]) getColumns() []sg.Ge {
 	columnGes := make([]sg.Ge, 0)
-	columns := entityColumnMap[getEntityPkgName(o.orm.entity)]
-	joinRefs := entityJoinRefMap[getEntityPkgName(o.orm.entity)]
-	for _, c := range columns {
-		fieldName := entityColumnFieldMap[getEntityPkgName(o.orm.entity)][c]
-		if joinRefs == nil || joinRefs[fieldName] == nil {
-			columnGes = append(columnGes, sg.Alias(sg.C("t."+c), fieldName))
+	columns, cHave := entityColumnMap[getEntityPkgName(o.orm.entity)]
+	joinRefMap, jHave := entityJoinRefMap[getEntityPkgName(o.orm.entity)]
+	nullFieldMap, nullHave := entityNullFieldMap[getEntityPkgName(o.orm.entity)]
+	if cHave {
+		for _, c := range columns {
+			fieldName, fieldHave := entityColumnFieldMap[getEntityPkgName(o.orm.entity)][c]
+			if fieldHave && (!jHave || joinRefMap[fieldName] == nil) {
+				// add: null function
+				if nullHave && nullFieldMap[fieldName] != nil {
+					jn := nullFieldMap[fieldName]
+					// IFNULL(rel1.name, 'defaultVal') AS alias
+					if jn.DefaultArg {
+						columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, ?)", jn.FuncName, "t."+c), jn.DefaultVal), fieldName))
+					} else {
+						columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, %v)", jn.FuncName, "t."+c, jn.DefaultVal)), fieldName))
+					}
+				} else {
+					// rel_table.rel_column AS RelColumn
+					columnGes = append(columnGes, sg.Alias(sg.C("t."+c), fieldName))
+				}
+			}
 		}
 	}
 	return columnGes
@@ -69,7 +84,7 @@ func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	refCount := 1
 	refTableMap := make(map[string]string, 0)
 	if joinRefMap, have := entityJoinRefMap[getEntityPkgName(o.orm.entity)]; have && o.join {
-		joinNullMap, nullHave := entityJoinNullMap[getEntityPkgName(o.orm.entity)]
+		nullFieldMap, nullHave := entityNullFieldMap[getEntityPkgName(o.orm.entity)]
 		// append join column
 		for k, v := range joinRefMap {
 			relAlias, joined := refTableMap[v.RelTable]
@@ -80,10 +95,14 @@ func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 			}
 
 			// add: null function
-			if nullHave && joinNullMap[k] != nil {
-				jn := joinNullMap[k]
+			if nullHave && nullFieldMap[k] != nil {
+				jn := nullFieldMap[k]
 				// IFNULL(rel1.name, 'defaultVal') AS alias
-				columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, ?)", jn.FuncName, relAlias+"."+v.RelName), jn.DefaultVal), k))
+				if jn.DefaultArg {
+					columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, ?)", jn.FuncName, relAlias+"."+v.RelName), jn.DefaultVal), k))
+				} else {
+					columnGes = append(columnGes, sg.Alias(newFuncGe(fmt.Sprintf("%s(%s, %v)", jn.FuncName, relAlias+"."+v.RelName, jn.DefaultVal)), k))
+				}
 			} else {
 				// rel_table.rel_column AS RelColumn
 				columnGes = append(columnGes, sg.Alias(sg.C(relAlias+"."+v.RelName), k))

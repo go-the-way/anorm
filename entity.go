@@ -26,18 +26,19 @@ var (
 	errEntityMetadataNil       = errors.New("anorm: entity's metadata is nil")
 	errDuplicateRegisterEntity = errors.New("anorm: duplicate register entity")
 
-	entityTableMap        = make(map[string]string)                // K<entityPKGName> V<TableName>
-	entityTagMap          = make(map[string]map[string]*tag)       // K<entityPKGName> V< K<ColumnName> V<*Tag> >
-	entityColumnMap       = make(map[string][]string)              // K<entityPKGName> V<[]Column>
-	entityFieldMap        = make(map[string][]string)              // K<entityPKGName> V<[]Column>
-	entityFieldColumnMap  = make(map[string]map[string]string)     // K<entityPKGName> V< K<Field> V<Column> >
-	entityColumnFieldMap  = make(map[string]map[string]string)     // K<entityPKGName> V< K<Column> V<Field> >
-	entityInsertIgnoreMap = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
-	entityUpdateIgnoreMap = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
-	entityJoinRefMap      = make(map[string]map[string]*JoinRef)   // K<entityPKGName> V< K<Field> V<*JoinRef> >
-	entityNullFieldMap    = make(map[string]map[string]*NullField) // K<entityPKGName> V< K<Field> V<*NullField> >
-	entityPKMap           = make(map[string][]string, 0)           // K<entityPKGName> V<[]PKColumn>
-	entityDSMap           = make(map[string]string, 0)             // K<entityPKGName> V<DS>
+	entityTableMap         = make(map[string]string)                // K<entityPKGName> V<TableName>
+	entityTagMap           = make(map[string]map[string]*tag)       // K<entityPKGName> V< K<ColumnName> V<*Tag> >
+	entityColumnMap        = make(map[string][]string)              // K<entityPKGName> V<[]Column>
+	entityFieldMap         = make(map[string][]string)              // K<entityPKGName> V<[]Column>
+	entityFieldColumnMap   = make(map[string]map[string]string)     // K<entityPKGName> V< K<Field> V<Column> >
+	entityColumnFieldMap   = make(map[string]map[string]string)     // K<entityPKGName> V< K<Column> V<Field> >
+	entityInsertIgnoreMap  = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
+	entityUpdateIgnoreMap  = make(map[string]map[string]struct{})   // K<entityPKGName> V< K<Column> V<> >
+	entityNullFieldMap     = make(map[string]map[string]*NullField) // K<entityPKGName> V< K<Field> V<*NullField> >
+	entityJoinRefMap       = make(map[string]map[string]*JoinRef)   // K<entityPKGName> V< K<Field> V<*JoinRef> >
+	entityJoinNullFieldMap = make(map[string]map[string]*NullField) // K<entityPKGName> V< K<Field> V<*NullField> >
+	entityPKMap            = make(map[string][]string, 0)           // K<entityPKGName> V<[]PKColumn>
+	entityDSMap            = make(map[string]string, 0)             // K<entityPKGName> V<DS>
 )
 
 type (
@@ -81,6 +82,8 @@ type (
 		UpdateIgnores []sg.C
 		// JoinRefs defines Table join rel table
 		JoinRefs map[string]*JoinRef
+		// JoinNullFields defines Table null fields when joined
+		JoinNullFields map[string]*NullField
 		// NullFields defines Table null fields
 		NullFields map[string]*NullField
 	}
@@ -126,6 +129,7 @@ func Register(entity Entity) {
 	insertIgnoreMap := make(map[string]struct{}, 0)
 	updateIgnoreMap := make(map[string]struct{}, 0)
 	joinRefMap := make(map[string]*JoinRef, 0)
+	joinNullFieldMap := make(map[string]*NullField, 0)
 	nullFieldMap := make(map[string]*NullField, 0)
 	tagMap := make(map[string]*tag, 0)
 	fields := make([]string, 0)
@@ -226,6 +230,12 @@ func Register(entity Entity) {
 		}
 	}
 
+	if vs := c.JoinNullFields; vs != nil {
+		for k, v := range vs {
+			joinNullFieldMap[k] = v
+		}
+	}
+
 	if vs := c.NullFields; vs != nil {
 		for k, v := range vs {
 			nullFieldMap[k] = v
@@ -248,6 +258,7 @@ func Register(entity Entity) {
 	entityInsertIgnoreMap[entityPkgName] = insertIgnoreMap
 	entityUpdateIgnoreMap[entityPkgName] = updateIgnoreMap
 	entityJoinRefMap[entityPkgName] = joinRefMap
+	entityJoinNullFieldMap[entityPkgName] = joinNullFieldMap
 	entityNullFieldMap[entityPkgName] = nullFieldMap
 	entityPKMap[entityPkgName] = pks
 	if c.DS == "" {

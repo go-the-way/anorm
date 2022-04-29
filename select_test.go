@@ -312,6 +312,12 @@ func (_ *_JoinMaster) Configure(c *EC) {
 		"RelName":  {"IFNULL", "", true},
 		"RelName2": {"IFNULL", "''", false},
 	}
+	c.JoinNullFields = map[string]*NullField{
+		"Name":     {"IFNULL", "", true},
+		"Name2":    {"IFNULL", "''", false},
+		"RelName":  {"IFNULL", "", true},
+		"RelName2": {"IFNULL", "''", false},
+	}
 }
 
 func (_ *_JoinRel) Configure(c *EC) {

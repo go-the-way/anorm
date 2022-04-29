@@ -40,7 +40,15 @@ func (o *selectOperation[E]) getColumns() []sg.Ge {
 	columnGes := make([]sg.Ge, 0)
 	columns, cHave := entityColumnMap[getEntityPkgName(o.orm.entity)]
 	joinRefMap, jHave := entityJoinRefMap[getEntityPkgName(o.orm.entity)]
-	nullFieldMap, nullHave := entityNullFieldMap[getEntityPkgName(o.orm.entity)]
+	var (
+		nullFieldMap map[string]*NullField
+		nullHave     bool
+	)
+	if o.join {
+		nullFieldMap, nullHave = entityJoinNullFieldMap[getEntityPkgName(o.orm.entity)]
+	} else {
+		nullFieldMap, nullHave = entityNullFieldMap[getEntityPkgName(o.orm.entity)]
+	}
 	if cHave {
 		for _, c := range columns {
 			fieldName, fieldHave := entityColumnFieldMap[getEntityPkgName(o.orm.entity)][c]
@@ -84,7 +92,7 @@ func (o *selectOperation[E]) getJoinRef() ([]sg.Ge, []sg.Ge) {
 	refCount := 1
 	refTableMap := make(map[string]string, 0)
 	if joinRefMap, have := entityJoinRefMap[getEntityPkgName(o.orm.entity)]; have && o.join {
-		nullFieldMap, nullHave := entityNullFieldMap[getEntityPkgName(o.orm.entity)]
+		nullFieldMap, nullHave := entityJoinNullFieldMap[getEntityPkgName(o.orm.entity)]
 		// append join column
 		for k, v := range joinRefMap {
 			relAlias, joined := refTableMap[v.RelTable]

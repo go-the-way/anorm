@@ -19,6 +19,7 @@ An another generic ORM framework implementation using the new way for Go.
 ```
 
 [![CircleCI](https://circleci.com/gh/go-the-way/anorm/tree/main.svg?style=shield)](https://circleci.com/gh/go-the-way/anorm/tree/main)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/go-the-way/anorm)
 [![codecov](https://codecov.io/gh/go-the-way/anorm/branch/main/graph/badge.svg?token=8MAR3J959H)](https://codecov.io/gh/go-the-way/anorm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-the-way/anorm)](https://goreportcard.com/report/github.com/go-the-way/anorm)
 [![GoDoc](https://pkg.go.dev/badge/github.com/go-the-way/anorm?status.svg)](https://pkg.go.dev/github.com/go-the-way/anorm?tab=doc)

@@ -149,7 +149,7 @@ func (o *Orm[E]) getRealVal(value reflect.Value) (val any) {
 					return vv
 				}
 			case reflect.TypeOf(NullString("")):
-				if vv, ok := v.(sql.NullString); ok {
+				if vv, ok := v.(sql.NullString); ok && vv.Valid {
 					return vv
 				}
 			case reflect.TypeOf(time.Time{}):

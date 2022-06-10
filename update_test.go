@@ -124,7 +124,7 @@ func TestUpdateTx(t *testing.T) {
 	m.ID = 1
 	m.Name = "yoyo"
 	m.Age = testAge + 1
-	if err := o.BeginTx(TxManager()); err != nil {
+	if err := o.BeginTx(NewTxManager()); err != nil {
 		t.Fatalf("TestUpdateTx failed: %v\n", err)
 	}
 	if _, err := o.OpsForUpdate().Where(sg.Eq("ccc", 1)).Exec(m); err == nil {

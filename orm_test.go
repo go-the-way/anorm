@@ -54,7 +54,7 @@ func TestNew(t *testing.T) {
 
 func TestOrmBegin(t *testing.T) {
 	o := New(new(userEntity))
-	if err := o.BeginTx(TxManager()); err != nil {
+	if err := o.BeginTx(NewTxManager()); err != nil {
 		t.Fatalf("TestOrmBegin failed: %v\n", err)
 	}
 	if !o.openTx || o.tx == nil {
@@ -70,8 +70,8 @@ func TestOrmBeginError(t *testing.T) {
 	}
 	{
 		o := New(new(userEntity))
-		_ = o.BeginTx(TxManager())
-		if err := o.BeginTx(TxManager()); err != errAlreadyBindTxManager {
+		_ = o.BeginTx(NewTxManager())
+		if err := o.BeginTx(NewTxManager()); err != errAlreadyBindTxManager {
 			t.Error("test failed")
 		}
 	}
@@ -135,17 +135,17 @@ func TestOrmBeginTxError(t *testing.T) {
 	{
 		o := New(new(_txEntity))
 		_ = o.db.Close()
-		if err := o.BeginTx(TxManager()); err != nil && err.Error() != "sql: database is closed" {
+		if err := o.BeginTx(NewTxManager()); err != nil && err.Error() != "sql: database is closed" {
 			t.Error("test failed")
 		}
-		if err := o.BeginTx(TxManager(), &sql.TxOptions{}); err != nil && err.Error() != "sql: database is closed" {
+		if err := o.BeginTx(NewTxManager(), &sql.TxOptions{}); err != nil && err.Error() != "sql: database is closed" {
 			t.Error("test failed")
 		}
 	}
 	{
 		o := New(new(_txEntity))
 		_ = o.db.Close()
-		if err := o.BeginTx(TxManager()); err != nil && err.Error() != "sql: database is closed" {
+		if err := o.BeginTx(NewTxManager()); err != nil && err.Error() != "sql: database is closed" {
 			t.Error("test failed")
 		}
 	}

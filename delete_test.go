@@ -104,7 +104,7 @@ func TestDeleteExecTX(t *testing.T) {
 	if err := insertTest(); err != nil {
 		t.Fatalf("TestDeleteExecTX prepare insert failed: %v\n", err)
 	}
-	if err := o.BeginTx(TxManager()); err != nil {
+	if err := o.BeginTx(NewTxManager()); err != nil {
 		t.Fatalf("TestDeleteExecTX failed: %v\n", err)
 	}
 	if _, err := o.OpsForDelete().IfWhere(false).IfWhere(true, getTestGes()...).IfOnlyWhere(false).IfOnlyWhere(true, getTestGes()...).Exec(nil); err != nil {

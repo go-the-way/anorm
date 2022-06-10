@@ -81,7 +81,7 @@ func TestInsertExecBatchError(t *testing.T) {
 	user2 := insertExecError{Name: "hugo1"}
 	user3 := insertExecError{Name: "hugo1"}
 	o := New(new(insertExecError))
-	txm := TxManager()
+	txm := NewTxManager()
 	o.BeginTx(txm)
 	_ = txm.Rollback()
 	if _, err := o.OpsForInsert().ExecBatch(&user1, &user2, &user3); err == nil {
@@ -193,7 +193,7 @@ func TestInsertError(t *testing.T) {
 	truncateTestTable()
 	o := New(new(userEntity))
 	m := userEntity{Name: testName}
-	txm := TxManager()
+	txm := NewTxManager()
 	if err := o.BeginTx(txm); err != nil {
 		t.Fatalf("TestInsertError failed: %v\n", err)
 	}

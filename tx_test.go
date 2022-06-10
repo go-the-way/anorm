@@ -14,7 +14,7 @@ package anorm
 import "testing"
 
 func TestTxManager(t *testing.T) {
-	txm := TxManager()
+	txm := NewTxManager()
 	if tx, err := testDB.Begin(); err != nil {
 		t.Error("TestTxManager failed")
 	} else {

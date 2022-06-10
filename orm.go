@@ -43,7 +43,7 @@ type Orm[E Entity] struct {
 	tx     *sql.Tx
 	openTx bool
 
-	txm *txManager
+	txm *TxManager
 }
 
 // New defines return a new Orm from EntityConfigurator entity
@@ -245,7 +245,7 @@ func beginTx(db *sql.DB, options ...*sql.TxOptions) (tx *sql.Tx, err error) {
 }
 
 // BeginTx begin a tx with tx manager
-func (o *Orm[E]) BeginTx(txm *txManager, options ...*sql.TxOptions) error {
+func (o *Orm[E]) BeginTx(txm *TxManager, options ...*sql.TxOptions) error {
 	if txm == nil {
 		return errTxManagerNil
 	}

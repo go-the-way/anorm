@@ -16,25 +16,25 @@ import (
 	"sync"
 )
 
-type txManager struct {
+type TxManager struct {
 	mu  *sync.Mutex
 	txs []*sql.Tx
 }
 
-// TxManager simplify tx manager
-func TxManager() *txManager {
-	return &txManager{mu: &sync.Mutex{}, txs: make([]*sql.Tx, 0)}
+// NewTxManager simplify tx manager
+func NewTxManager() *TxManager {
+	return &TxManager{mu: &sync.Mutex{}, txs: make([]*sql.Tx, 0)}
 }
 
 // Join other *sql.Tx
-func (txm *txManager) Join(tx *sql.Tx) {
+func (txm *TxManager) Join(tx *sql.Tx) {
 	txm.mu.Lock()
 	defer txm.mu.Unlock()
 	txm.txs = append(txm.txs, tx)
 }
 
 // Commit all txs
-func (txm *txManager) Commit() error {
+func (txm *TxManager) Commit() error {
 	txm.mu.Lock()
 	defer txm.mu.Unlock()
 	for _, tx := range txm.txs {
@@ -46,7 +46,7 @@ func (txm *txManager) Commit() error {
 }
 
 // Rollback all txs
-func (txm *txManager) Rollback() error {
+func (txm *TxManager) Rollback() error {
 	txm.mu.Lock()
 	defer txm.mu.Unlock()
 	for _, tx := range txm.txs {

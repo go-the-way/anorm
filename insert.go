@@ -92,13 +92,13 @@ func (o *insertOperation[E]) Exec(entity E) error {
 		err    error
 	)
 	sqlStr, ps := o.getInsertBuilder(entity)
-	queryLog("OpsForInsert.Exec", sqlStr, ps)
+	queryLog("OpsForInsert.Query", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	queryErrorLog("OpsForInsert.Exec", sqlStr, ps, err)
+	queryErrorLog(err, "OpsForInsert.Query", sqlStr, ps)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (o *insertOperation[E]) ExecBatch(entities ...E) (count int64, err error) {
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	queryErrorLog("OpsForInsert.ExecBatch", sqlStr, ps, err)
+	queryErrorLog(err, "OpsForInsert.ExecBatch", sqlStr, ps)
 	if err != nil {
 		return 0, err
 	}

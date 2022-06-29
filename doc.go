@@ -50,7 +50,7 @@ func main() {
 	a.DataSourcePool.Push(db)
 	a.Register(new(Person))
 	o := a.New(new(Person))
-	count, err := o.OpsForSelectCount().Exec(nil)
+	count, err := o.OpsForSelectCount().Query(nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {

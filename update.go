@@ -150,7 +150,7 @@ func (o *updateOperation[E]) Exec(entity E) (count int64, err error) {
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	queryErrorLog("OpsForUpdate.Exec", sqlStr, ps, err)
+	queryErrorLog(err, "OpsForUpdate.Exec", sqlStr, ps)
 	if result != nil {
 		count, _ = result.RowsAffected()
 	}

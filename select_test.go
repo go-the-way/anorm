@@ -28,28 +28,28 @@ func TestSelectExec(t *testing.T) {
 	}
 	o := New(new(userEntity))
 	{
-		if entities, err := o.OpsForSelect().OrderBy(sg.C("id")).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().OrderBy(sg.C("id")).Query(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().IfWhere(false).IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().IfWhere(false).IfWhere(true, getTestGes()...).Query(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().Where(getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Where(getTestGes()...).Query(nil); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().Where().Exec(getTest()); err != nil {
+		if entities, err := o.OpsForSelect().Where().Query(getTest()); err != nil {
 			t.Fatalf("TestSelectExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectExec failed!")
@@ -64,7 +64,7 @@ func TestSelectExecOne(t *testing.T) {
 	}
 	o := New(new(userEntity))
 	{
-		if ee, err := o.OpsForSelect().ExecOne(nil); err != nil {
+		if ee, err := o.OpsForSelect().QueryOne(nil); err != nil {
 			t.Fatalf("TestSelectExecOne failed: %v\n", err)
 		} else if ee == nil {
 			t.Fatalf("TestSelectExecOne failed!")
@@ -76,7 +76,7 @@ func TestSelectExecOne2(t *testing.T) {
 	truncateTestTable()
 	o := New(new(userEntity))
 	{
-		if ee, err := o.OpsForSelect().ExecOne(nil); err != nil {
+		if ee, err := o.OpsForSelect().QueryOne(nil); err != nil {
 			t.Fatalf("TestSelectExecOne failed: %v\n", err)
 		} else if ee != nil {
 			t.Fatalf("TestSelectExecOne failed!")
@@ -89,7 +89,7 @@ func TestSelectExecPageError(t *testing.T) {
 		truncateTestTable()
 		o := New(new(userEntity))
 		{
-			if _, _, err := o.OpsForSelect().Where(sg.And(sg.Eq("1", 1))).ExecPage(nil, pagination.Pg, 0, 2); err == nil {
+			if _, _, err := o.OpsForSelect().Where(sg.And(sg.Eq("1", 1))).QueryPage(nil, pagination.Pg, 0, 2); err == nil {
 				t.Fatalf("TestSelectExecPageError failed: %v\n", err)
 			}
 		}
@@ -97,7 +97,7 @@ func TestSelectExecPageError(t *testing.T) {
 	{
 		o := New(new(userEntity))
 		{
-			if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+			if entities, count, err := o.OpsForSelect().QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 				t.Fatalf("TestSelectExecPageError failed: %v\n", err)
 			} else if len(entities) != 0 && int(count) != 0 {
 				t.Fatal("TestSelectExecPageError failed!")
@@ -115,28 +115,28 @@ func TestSelectExecPage(t *testing.T) {
 	}
 	o := New(new(userEntity))
 	{
-		if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().ExecPage(getTest(), pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().QueryPage(getTest(), pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
@@ -151,28 +151,28 @@ func TestSelectNullExec(t *testing.T) {
 	}
 	o := New(new(userEntityNull))
 	{
-		if entities, err := o.OpsForSelect().Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Query(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().IfWhere(true, getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().IfWhere(true, getTestGes()...).Query(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().Where(getTestGes()...).Exec(nil); err != nil {
+		if entities, err := o.OpsForSelect().Where(getTestGes()...).Query(nil); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
 		}
 	}
 	{
-		if entities, err := o.OpsForSelect().Where().Exec(getNullTest()); err != nil {
+		if entities, err := o.OpsForSelect().Where().Query(getNullTest()); err != nil {
 			t.Fatalf("TestSelectNullExec failed: %v\n", err)
 		} else if len(entities) != 1 {
 			t.Fatalf("TestSelectNullExec failed!")
@@ -188,28 +188,28 @@ func TestSelectNullExecPage(t *testing.T) {
 	}
 	o := New(new(userEntityNull))
 	{
-		if entities, count, err := o.OpsForSelect().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().IfWhere(true, getTestGes()...).QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().Where(getTestGes()...).QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
 		}
 	}
 	{
-		if entities, count, err := o.OpsForSelect().ExecPage(getNullTest(), pagination.MySql, 0, 2); err != nil {
+		if entities, count, err := o.OpsForSelect().QueryPage(getNullTest(), pagination.MySql, 0, 2); err != nil {
 			t.Fatalf("TestSelectExecPage failed: %v\n", err)
 		} else if len(entities) != 2 && int(count) != c {
 			t.Fatal("TestSelectExecPage failed!")
@@ -230,7 +230,7 @@ func TestSelectJoin(t *testing.T) {
 
 	{
 		o := New(new(_JoinMaster))
-		if es, err := o.OpsForSelect().Join().CountJoin().Exec(nil); err != nil {
+		if es, err := o.OpsForSelect().Join().CountJoin().Query(nil); err != nil {
 			t.Error("TestSelectJoin failed")
 		} else if len(es) != 0 {
 			t.Error("TestSelectJoin failed")
@@ -239,7 +239,7 @@ func TestSelectJoin(t *testing.T) {
 
 	{
 		o := New(new(_JoinMaster))
-		if es, err := o.OpsForSelect().Where(sg.In("xyz", 1, 2, 3, 4)).Exec(nil); err == nil {
+		if es, err := o.OpsForSelect().Where(sg.In("xyz", 1, 2, 3, 4)).Query(nil); err == nil {
 			t.Error("TestSelectJoin failed")
 		} else if es != nil {
 			t.Error("TestSelectJoin failed")
@@ -255,7 +255,7 @@ func TestSelectJoin(t *testing.T) {
 		if err := o.OpsForInsert().Exec(&_JoinMaster{0, "hello", "hello", jr.ID, "", ""}); err != nil {
 			t.Error("TestSelectJoin failed")
 		}
-		if es, total, err := o.OpsForSelect().Join().CountJoin().ExecPage(nil, pagination.MySql, 0, 2); err != nil {
+		if es, total, err := o.OpsForSelect().Join().CountJoin().QueryPage(nil, pagination.MySql, 0, 2); err != nil {
 			t.Error("TestSelectJoin failed")
 		} else if len(es) <= 0 || total <= 0 {
 			t.Error("TestSelectJoin failed")
@@ -271,7 +271,7 @@ func TestSelectJoin(t *testing.T) {
 		if err := o.OpsForInsert().Exec(&_JoinMasterError{0, "hello", jr.ID, ""}); err != nil {
 			t.Error("TestSelectJoin failed")
 		}
-		if _, _, err := o.OpsForSelect().Join().ExecPage(nil, pagination.MySql, 0, 2); err == nil {
+		if _, _, err := o.OpsForSelect().Join().QueryPage(nil, pagination.MySql, 0, 2); err == nil {
 			t.Error("TestSelectJoin failed")
 		}
 	}

@@ -13,6 +13,7 @@ package anorm
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/go-the-way/anorm/pagination"
 	"github.com/go-the-way/sg"
@@ -169,7 +170,11 @@ func (o *selectOperation[E]) appendWhereGes(entity E) {
 	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
-// ExecOne select for one return
+var (
+	ErrQueryTooManyResult = errors.New("query one return too many result")
+)
+
+// QueryOne select for one return
 //
 // Params:
 //
@@ -181,16 +186,18 @@ func (o *selectOperation[E]) appendWhereGes(entity E) {
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) ExecOne(entity E) (e E, err error) {
-	if es, err2 := o.Exec(entity); err2 == nil && len(es) > 0 {
-		e = es[0]
-	} else {
+func (o *selectOperation[E]) QueryOne(entity E) (e E, err error) {
+	if es, err2 := o.Query(entity); err2 != nil {
 		err = err2
+	} else if len(es) > 1 {
+		err = ErrQueryTooManyResult
+	} else if len(es) == 1 {
+		e = es[0]
 	}
 	return
 }
 
-// Exec select for entities
+// Query select for entities
 //
 // Params:
 //
@@ -202,7 +209,7 @@ func (o *selectOperation[E]) ExecOne(entity E) (e E, err error) {
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
+func (o *selectOperation[E]) Query(entity E) (entities []E, err error) {
 	o.appendWhereGes(entity)
 	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
@@ -217,16 +224,16 @@ func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
 	sqlStr, ps := selectBuilder.Build()
-	queryLog("OpsForSelect.Exec", sqlStr, ps)
+	queryLog("OpsForSelect.Query", sqlStr, ps)
 	var rows *sql.Rows
 	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
-		queryErrorLog("OpsForSelect.Exec", sqlStr, ps, err)
+		queryErrorLog(err, "OpsForSelect.Query", sqlStr, ps)
 		return
 	}
 	return ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])
 }
 
-// ExecPage select for page
+// QueryPage select for page
 //
 // Params:
 //
@@ -246,7 +253,7 @@ func (o *selectOperation[E]) Exec(entity E) (entities []E, err error) {
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
+func (o *selectOperation[E]) QueryPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
 	refColumns, refJoins := o.getJoinRef()
 	sc := o.orm.OpsForSelectCount()
 	sc.Where(o.wheres...)
@@ -274,10 +281,10 @@ func (o *selectOperation[E]) ExecPage(entity E, pager pagination.Pager, offset, 
 	sqlStr, ps := selectBuilder.Build()
 	sqlStr, pps := pager.Page(sqlStr, offset, size)
 	ps = append(ps, pps...)
-	queryLog("OpsForSelect.ExecPage", sqlStr, ps)
+	queryLog("OpsForSelect.QueryPage", sqlStr, ps)
 	var rows *sql.Rows
 	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
-		queryErrorLog("OpsForSelect.ExecPage", sqlStr, ps, err)
+		queryErrorLog(err, "OpsForSelect.QueryPage", sqlStr, ps)
 		return
 	}
 	entities, err = ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])

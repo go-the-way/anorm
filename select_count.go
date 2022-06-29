@@ -73,9 +73,9 @@ func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
 		Where(sg.AndGroup(o.wheres...)).
 		Join(o.joins...).
 		Build()
-	queryLog("OpsForSelectCount.Exec", sqlStr, ps)
+	queryLog("OpsForSelectCount.Query", sqlStr, ps)
 	row := o.orm.db.QueryRow(sqlStr, ps...)
-	queryErrorLog("OpsForSelectCount.Exec", sqlStr, ps, row.Err())
+	queryErrorLog(row.Err(), "OpsForSelectCount.Query", sqlStr, ps)
 	if err = row.Err(); err != nil {
 		return
 	}

@@ -31,6 +31,7 @@ type (
 	}
 	logField struct{ k, v any }
 	logLevel uint8
+	LogF     = logField
 )
 
 const (
@@ -61,7 +62,7 @@ var (
 	queryLog = func(name, sql string, ps []any) {
 		Logger.Debug([]*logField{LogField("Name", name), LogField("SQL", sql), LogField("Parameter", ps)}, "")
 	}
-	queryErrorLog = func(name, sql string, ps []any, err error) {
+	queryErrorLog = func(err error, name, sql string, ps []any) {
 		if err != nil {
 			Logger.Error([]*logField{LogField("Name", name), LogField("SQL", sql), LogField("Parameter", ps)}, "err: %v", err)
 		}

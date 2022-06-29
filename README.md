@@ -1,10 +1,10 @@
 # anorm
 
 ```
- _____  ____    ___    ___    ____  ____  
-(____ ||  _ \  / _ \  / _ \  / ___)|    \ 
-/ ___ || | | || |_| || |_| || |    | | | |
-\_____||_| |_| \___/  \___/ |_|    |_|_|_|
+ _____  ____    ___    ____  ____  
+(____ ||  _ \  / _ \  / ___)|    \ 
+/ ___ || | | || |_| || |    | | | |
+\_____||_| |_| \___/ |_|    |_|_|_|
 
 ::anorm:: 
 
@@ -27,7 +27,7 @@ An another generic ORM framework implementation using the new way for Go.
 
 
 ### Features
-- DataSourcePool manege
+- DataSourcePool manage
 - Pager implementation
 - More levels logger
 - Support joins
@@ -75,7 +75,7 @@ func main() {
 	a.DataSourcePool.Push(db)
 	a.Register(new(Person))
 	o := a.New(new(Person))
-	count, err := o.OpsForSelectCount().Exec(nil)
+	count, err := o.OpsForSelectCount().Query(nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {

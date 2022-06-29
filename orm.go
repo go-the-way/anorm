@@ -160,46 +160,6 @@ func (o *Orm[E]) getRealVal(value reflect.Value) (val any) {
 				if vv, ok := v.(sql.NullTime); ok && vv.Valid && vv.Time.After(time.Time{}) {
 					return vv
 				}
-
-				/* ignore Pointer
-				case reflect.TypeOf(NullBoolPtr(false)):
-					if vv, ok := v.(*sql.NullBool); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullBytePtr(0)):
-					if vv, ok := v.(*sql.NullByte); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullInt16Ptr(0)):
-					if vv, ok := v.(*sql.NullInt16); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullInt32Ptr(0)):
-					if vv, ok := v.(*sql.NullInt32); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullInt64Ptr(0)):
-					if vv, ok := v.(*sql.NullInt64); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullFloat64Ptr(0)):
-					if vv, ok := v.(*sql.NullFloat64); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullStringPtr("")):
-					if vv, ok := v.(*sql.NullString); ok {
-						return vv
-					}
-				case reflect.TypeOf(&time.Time{}):
-					if vv, ok := v.(*time.Time); ok {
-						return vv
-					}
-				case reflect.TypeOf(NullTimePtr(time.Time{})):
-					if vv, ok := v.(*sql.NullTime); ok {
-						return vv
-					}
-				*/
-
 			}
 		}
 	}

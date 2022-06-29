@@ -84,17 +84,17 @@ func (o *deleteOperation[E]) getDeleteBuilder(entity E) (string, []any) {
 func (o *deleteOperation[E]) Exec(entity E) (count int64, err error) {
 	var result sql.Result
 	sqlStr, ps := o.getDeleteBuilder(entity)
-	queryLog("OpsForDelete.Exec", sqlStr, ps)
+	queryLog("OpsForDelete.Query", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	queryErrorLog("OpsForDelete.Exec", sqlStr, ps, err)
+	queryErrorLog(err, "OpsForDelete.Query", sqlStr, ps)
 	ra := int64(0)
 	if result != nil {
 		ra, err = result.RowsAffected()
-		queryErrorLog("OpsForDelete.Exec", sqlStr, ps, err)
+		queryErrorLog(err, "OpsForDelete.Query", sqlStr, ps)
 	}
 	return ra, err
 }

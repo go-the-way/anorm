@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 )
 
 type dataSourcePool struct {
@@ -27,24 +26,7 @@ type dataSourcePool struct {
 var (
 	// DataSourcePool global datasource pool
 	DataSourcePool = &dataSourcePool{mu: &sync.Mutex{}, dbM: make(map[string]*sql.DB, 0)}
-	pingDBDelay    = time.Second * 10
 )
-
-func init() {
-	go pingDB()
-}
-
-func pingDB() {
-	for k, v := range DataSourcePool.dbM {
-		if err := v.Ping(); err != nil {
-			Logger.Debug([]*logField{LogField("datasource", k)}, "ping error : %v", err)
-		} else {
-			Logger.Debug([]*logField{LogField("datasource", k)}, "ping success")
-		}
-	}
-	time.Sleep(pingDBDelay)
-	pingDB()
-}
 
 // Push master datasource
 func (p *dataSourcePool) Push(db *sql.DB) {

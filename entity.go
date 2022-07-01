@@ -101,12 +101,7 @@ type (
 	}
 
 	JoinRef struct {
-		Field      string // SelfID
-		Type       string // left,right,inner,...
-		SelfColumn string // self_id
-		RelTable   string // rel_table
-		RelID      string // rel_id
-		RelName    string // rel_name
+		Field, Type, SelfColumn, RelTable, RelID, RelName string // rel_name
 	}
 
 	NullField struct {

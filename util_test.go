@@ -33,21 +33,13 @@ func TestGetStrategyName(t *testing.T) {
 	}
 }
 
-type _scanStruct struct {
-	Name  string
-	Name2 string
-}
+type (
+	_scanStruct struct{ Name, Name2 string }
+	_tStruct    struct{ T string }
+)
 
-func (_ *_scanStruct) Configure(c *EC) {
-}
-
-type _tStruct struct {
-	T string
-}
-
-func (_ *_tStruct) Configure(c *EC) {
-
-}
+func (_ *_scanStruct) Configure(*EC) {}
+func (_ *_tStruct) Configure(*EC)    {}
 
 func TestScanStruct(t *testing.T) {
 	{

@@ -11,7 +11,10 @@
 
 package xmlquery
 
-import "github.com/go-the-way/anorm"
+import (
+	"database/sql"
+	"github.com/go-the-way/anorm"
+)
 
 type nodeType uint8
 
@@ -79,13 +82,31 @@ func (n *selectNode) getDatasource() string { return n.Datasource }
 func (n *selectNode) GetID() string         { return n.ID }
 func (n *selectNode) GetInnerXml() string   { return n.InnerXml }
 
-var (
-	queryLog = func(name, sql string, ps []any) {
-		anorm.Logger.Debug([]*anorm.LogF{anorm.LogField("Name", name), anorm.LogField("SQL", sql), anorm.LogField("Parameter", ps)}, "")
+func queryLog(name, sql string, ps ...any) {
+	anorm.Logger.Debug([]*anorm.LogF{anorm.LogField("Name", name), anorm.LogField("SQL", sql), anorm.LogField("Parameter", ps)}, "")
+}
+
+func queryErrorLog(err error, name, sql string, ps ...any) {
+	if err != nil {
+		anorm.Logger.Error([]*anorm.LogF{anorm.LogField("Name", name), anorm.LogField("SQL", sql), anorm.LogField("Parameter", ps)}, "err: %v", err)
 	}
-	queryErrorLog = func(err error, name, sql string, ps []any) {
-		if err != nil {
-			anorm.Logger.Error([]*anorm.LogF{anorm.LogField("Name", name), anorm.LogField("SQL", sql), anorm.LogField("Parameter", ps)}, "err: %v", err)
-		}
+}
+
+func getDS(rn *rootNode, nd node) string {
+	if ds := nd.getDatasource(); ds != "" {
+		return ds
 	}
-)
+	if ds := rn.Datasource; ds != "" {
+		return ds
+	}
+	return ""
+}
+
+func getNodeParams(namespace, id string, nodeType nodeType) (string, *sql.DB, string) {
+	rn, nd := getNode(namespace, id, nodeType)
+	datasource := getDS(rn, nd)
+	if datasource == "" {
+		datasource = "_"
+	}
+	return datasource, anorm.DataSourcePool.Required(datasource), nd.GetInnerXml()
+}

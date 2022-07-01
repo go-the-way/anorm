@@ -38,6 +38,7 @@ An another generic ORM framework implementation using the new way for Go.
 - Index definition
 - Simple Tx manager
 - Insert batch
+- Support XmlQuery
 
 ### Quickstart
 
@@ -75,7 +76,7 @@ func main() {
 	a.DataSourcePool.Push(db)
 	a.Register(new(Person))
 	o := a.New(new(Person))
-	count, err := o.OpsForSelectCount().Query(nil)
+	count, err := o.OpsForSelectCount().Count(nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {

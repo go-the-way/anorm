@@ -12,35 +12,54 @@
 package anorm
 
 import (
+	"database/sql"
 	"github.com/go-the-way/sg"
 )
 
-type selectCountOperation[E Entity] struct {
-	orm    *Orm[E]
-	wheres []sg.Ge
-	joins  []sg.Ge
+type (
+	SelectCountOperation[E Entity] interface {
+		BeginTx(txm *TxManager, options ...*sql.TxOptions) error
+		IfWhere(cond bool, wheres ...sg.Ge) SelectCountOperation[E]
+		Where(wheres ...sg.Ge) SelectCountOperation[E]
+		Join(joins ...sg.Ge) SelectCountOperation[E]
+		Count(e E) (c int64, err error)
+	}
+	selectCountOperation[E Entity] struct {
+		orm           *Orm[E]
+		wheres, joins []sg.Ge
+	}
+)
+
+func SelectCount[E Entity](e E) SelectCountOperation[E] {
+	return New(e).OpsForSelectCount()
+}
+
+func SelectCountWithDs[E Entity](e E, ds string) SelectCountOperation[E] {
+	return NewWithDS(e, ds).OpsForSelectCount()
 }
 
 func newSelectCountOperation[E Entity](o *Orm[E]) *selectCountOperation[E] {
 	return &selectCountOperation[E]{orm: o, wheres: make([]sg.Ge, 0)}
 }
 
+func (o *selectCountOperation[E]) BeginTx(txm *TxManager, options ...*sql.TxOptions) error {
+	return o.orm.BeginTx(txm, options...)
+}
+
 // IfWhere if cond is true, append wheres
-func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectCountOperation[E] {
+func (o *selectCountOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) SelectCountOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
 	return o
 }
 
-// Where append wheres
-func (o *selectCountOperation[E]) Where(wheres ...sg.Ge) *selectCountOperation[E] {
+func (o *selectCountOperation[E]) Where(wheres ...sg.Ge) SelectCountOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
-// Where append wheres
-func (o *selectCountOperation[E]) join(joins ...sg.Ge) *selectCountOperation[E] {
+func (o *selectCountOperation[E]) Join(joins ...sg.Ge) SelectCountOperation[E] {
 	o.joins = append(o.joins, joins...)
 	return o
 }
@@ -53,11 +72,11 @@ func (o *selectCountOperation[E]) appendWhereGes(entity E) {
 	o.wheres = append(o.wheres, o.orm.getWhereGes(entity)...)
 }
 
-// Exec select count
+// Count select count
 //
 // Params:
 //
-// - entity: the orm wrapper entity
+// - e: the orm wrapper entity
 //
 // Returns:
 //
@@ -65,17 +84,17 @@ func (o *selectCountOperation[E]) appendWhereGes(entity E) {
 //
 // - err: exec error
 //
-func (o *selectCountOperation[E]) Exec(entity E) (count int64, err error) {
-	o.appendWhereGes(entity)
+func (o *selectCountOperation[E]) Count(e E) (count int64, err error) {
+	o.appendWhereGes(e)
 	sqlStr, ps := sg.SelectBuilder().
 		Select(sg.Alias(sg.C("count(0)"), "c")).
 		From(sg.Alias(o.getTableName(), "t")).
 		Where(sg.AndGroup(o.wheres...)).
 		Join(o.joins...).
 		Build()
-	queryLog("OpsForSelectCount.Query", sqlStr, ps)
+	queryLog("OpsForSelectCount.Count", sqlStr, ps)
 	row := o.orm.db.QueryRow(sqlStr, ps...)
-	queryErrorLog(row.Err(), "OpsForSelectCount.Query", sqlStr, ps)
+	queryErrorLog(row.Err(), "OpsForSelectCount.Count", sqlStr, ps)
 	if err = row.Err(); err != nil {
 		return
 	}

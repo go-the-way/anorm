@@ -22,13 +22,13 @@ var (
 	nodeMap     = make(map[string]*rootNode, 0)
 	nodeTypeMap = map[nodeType]string{insertType: "insert", deleteType: "delete", updateType: "update", selectType: "select"}
 
-	ErrXmlQueryReadFS      = errors.New("xmlquery: read fs err")
-	ErrXmlQueryUnmarshal   = errors.New("xmlquery: unmarshal err")
-	ErrXmlQueryParse       = errors.New("xmlquery: parse err")
-	ErrXmlQueryNSEmpty     = errors.New("xmlquery: namespace empty")
-	ErrXmlQueryNSDuplicate = errors.New("xmlquery: namespace duplicate")
-	ErrXmlQueryIDEmpty     = errors.New("xmlquery: id empty")
-	ErrXmlQuerySQLEmpty    = errors.New("xmlquery: sql empty")
+	ErrReadFS      = errors.New("xmlquery: read fs err")
+	ErrUnmarshal   = errors.New("xmlquery: unmarshal err")
+	ErrParse       = errors.New("xmlquery: parse err")
+	ErrNSEmpty     = errors.New("xmlquery: namespace empty")
+	ErrNSDuplicate = errors.New("xmlquery: namespace duplicate")
+	ErrIDEmpty     = errors.New("xmlquery: id empty")
+	ErrSQLEmpty    = errors.New("xmlquery: sql empty")
 
 	ErrUnbindNamespace = errors.New("xmlquery: unbind namespace")
 	ErrUnbindNode      = errors.New("xmlquery: unbind node")
@@ -85,7 +85,7 @@ func getNode(namespace, id string, nt nodeType) (rn *rootNode, nd node) {
 // Bind bind named of fs to rootNode
 func Bind(fs *embed.FS, name string) {
 	if bytes, err := fs.ReadFile(name); err != nil {
-		panic(ErrXmlQueryReadFS)
+		panic(ErrReadFS)
 	} else {
 		BindRaw(bytes)
 	}
@@ -120,9 +120,9 @@ func checkNode(rn *rootNode) {
 	}
 	for _, nn := range nodes {
 		if id := nn.GetID(); id == "" {
-			panic(ErrXmlQueryIDEmpty)
+			panic(ErrIDEmpty)
 		} else if nn.GetInnerXml() == "" {
-			panic(ErrXmlQuerySQLEmpty)
+			panic(ErrSQLEmpty)
 		} else {
 			anorm.Logger.Debug(nil, "xmlquery: namespace[%s] datasource[%s] node[type:%s, id:%s, datasource:%s] check pass", rn.Namespace, rn.Datasource, nodeTypeMap[nn.getType()], id, nn.getDatasource())
 		}
@@ -133,11 +133,11 @@ func checkNode(rn *rootNode) {
 func BindRaw(bytes []byte) {
 	rn := rootNode{}
 	if err := xml.Unmarshal(bytes, &rn); err != nil {
-		panic(ErrXmlQueryUnmarshal)
+		panic(ErrUnmarshal)
 	} else if rn.Namespace == "" {
-		panic(ErrXmlQueryNSEmpty)
+		panic(ErrNSEmpty)
 	} else if _, have := nodeMap[rn.Namespace]; have {
-		panic(ErrXmlQueryNSDuplicate)
+		panic(ErrNSDuplicate)
 	} else {
 		nodeMap[rn.Namespace] = &rn
 		checkNode(&rn)

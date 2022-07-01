@@ -19,27 +19,49 @@ import (
 	"github.com/go-the-way/sg"
 )
 
-type selectOperation[E Entity] struct {
-	orm       *Orm[E]
-	countJoin bool
-	join      bool
-	columns   []sg.Ge
-	wheres    []sg.Ge
-	orderBys  []sg.Ge
+type (
+	SelectOperation[E Entity] interface {
+		BeginTx(txm *TxManager, options ...*sql.TxOptions) error
+		CountJoin() SelectOperation[E]
+		Join() SelectOperation[E]
+		IfWhere(cond bool, wheres ...sg.Ge) SelectOperation[E]
+		Where(wheres ...sg.Ge) SelectOperation[E]
+		OrderBy(orderBys ...sg.Ge) SelectOperation[E]
+		One(ie E) (oe E, err error)
+		List(e E) (es []E, err error)
+		Page(e E, pager pagination.Pager, offset, size int) (es []E, total int64, err error)
+	}
+	selectOperation[E Entity] struct {
+		orm                       *Orm[E]
+		countJoin, join           bool
+		columns, wheres, orderBys []sg.Ge
+	}
+)
+
+func Select[E Entity](e E) SelectOperation[E] {
+	return New(e).OpsForSelect()
+}
+
+func SelectWithDs[E Entity](e E, ds string) SelectOperation[E] {
+	return NewWithDS(e, ds).OpsForSelect()
 }
 
 func newSelectOperation[E Entity](o *Orm[E]) *selectOperation[E] {
 	return &selectOperation[E]{orm: o, columns: make([]sg.Ge, 0), wheres: make([]sg.Ge, 0), orderBys: make([]sg.Ge, 0)}
 }
 
+func (o *selectOperation[E]) BeginTx(txm *TxManager, options ...*sql.TxOptions) error {
+	return o.orm.BeginTx(txm, options...)
+}
+
 // CountJoin enable join query
-func (o *selectOperation[E]) CountJoin() *selectOperation[E] {
+func (o *selectOperation[E]) CountJoin() SelectOperation[E] {
 	o.countJoin = true
 	return o
 }
 
 // Join enable join query
-func (o *selectOperation[E]) Join() *selectOperation[E] {
+func (o *selectOperation[E]) Join() SelectOperation[E] {
 	o.join = true
 	return o
 }
@@ -147,7 +169,7 @@ func (o *selectOperation[E]) getTableName() sg.Ge {
 }
 
 // IfWhere if cond is true append wheres
-func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectOperation[E] {
+func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) SelectOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
@@ -155,13 +177,13 @@ func (o *selectOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *selectOperatio
 }
 
 // Where append wheres
-func (o *selectOperation[E]) Where(wheres ...sg.Ge) *selectOperation[E] {
+func (o *selectOperation[E]) Where(wheres ...sg.Ge) SelectOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
 // OrderBy append OrderBys
-func (o *selectOperation[E]) OrderBy(orderBys ...sg.Ge) *selectOperation[E] {
+func (o *selectOperation[E]) OrderBy(orderBys ...sg.Ge) SelectOperation[E] {
 	o.orderBys = append(o.orderBys, orderBys...)
 	return o
 }
@@ -171,14 +193,14 @@ func (o *selectOperation[E]) appendWhereGes(entity E) {
 }
 
 var (
-	ErrQueryTooManyResult = errors.New("query one return too many result")
+	ErrSelectTooManyResult = errors.New("query one return too many result")
 )
 
-// QueryOne select for one return
+// One select for one return
 //
 // Params:
 //
-// - entity: the orm wrapper entity
+// - e: the orm wrapper entity
 //
 // Returns:
 //
@@ -186,22 +208,22 @@ var (
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) QueryOne(entity E) (e E, err error) {
-	if es, err2 := o.Query(entity); err2 != nil {
+func (o *selectOperation[E]) One(ie E) (oe E, err error) {
+	if es, err2 := o.List(ie); err2 != nil {
 		err = err2
 	} else if len(es) > 1 {
-		err = ErrQueryTooManyResult
+		err = ErrSelectTooManyResult
 	} else if len(es) == 1 {
-		e = es[0]
+		oe = es[0]
 	}
 	return
 }
 
-// Query select for entities
+// List select for entities
 //
 // Params:
 //
-// - entity: the orm wrapper entity
+// - e: the orm wrapper entity
 //
 // Returns:
 //
@@ -209,8 +231,8 @@ func (o *selectOperation[E]) QueryOne(entity E) (e E, err error) {
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) Query(entity E) (entities []E, err error) {
-	o.appendWhereGes(entity)
+func (o *selectOperation[E]) List(e E) (es []E, err error) {
+	o.appendWhereGes(e)
 	selectBuilder := sg.SelectBuilder().
 		Select(o.getColumns()...).
 		From(sg.Alias(o.getTableName(), "t")).
@@ -224,20 +246,20 @@ func (o *selectOperation[E]) Query(entity E) (entities []E, err error) {
 		selectBuilder.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
 	sqlStr, ps := selectBuilder.Build()
-	queryLog("OpsForSelect.Query", sqlStr, ps)
+	queryLog("OpsForSelect.List", sqlStr, ps)
 	var rows *sql.Rows
 	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
-		queryErrorLog(err, "OpsForSelect.Query", sqlStr, ps)
+		queryErrorLog(err, "OpsForSelect.List", sqlStr, ps)
 		return
 	}
-	return ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])
+	return ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(e)])
 }
 
-// QueryPage select for page
+// Page select for page
 //
 // Params:
 //
-// - entity: the orm wrapper entity
+// - e: the orm wrapper entity
 //
 // - pager: the pager see pkg pagination
 //
@@ -253,14 +275,14 @@ func (o *selectOperation[E]) Query(entity E) (entities []E, err error) {
 //
 // - err: exec error
 //
-func (o *selectOperation[E]) QueryPage(entity E, pager pagination.Pager, offset, size int) (entities []E, total int64, err error) {
+func (o *selectOperation[E]) Page(e E, pager pagination.Pager, offset, size int) (es []E, total int64, err error) {
 	refColumns, refJoins := o.getJoinRef()
 	sc := o.orm.OpsForSelectCount()
 	sc.Where(o.wheres...)
 	if o.countJoin && len(refJoins) > 0 {
-		sc.join(sg.NewJoiner(refJoins, " ", "", "", false))
+		sc.Join(sg.NewJoiner(refJoins, " ", "", "", false))
 	}
-	total, err = sc.Exec(entity)
+	total, err = sc.Count(e)
 	if err != nil {
 		return
 	}
@@ -281,12 +303,12 @@ func (o *selectOperation[E]) QueryPage(entity E, pager pagination.Pager, offset,
 	sqlStr, ps := selectBuilder.Build()
 	sqlStr, pps := pager.Page(sqlStr, offset, size)
 	ps = append(ps, pps...)
-	queryLog("OpsForSelect.QueryPage", sqlStr, ps)
+	queryLog("OpsForSelect.Page", sqlStr, ps)
 	var rows *sql.Rows
 	if rows, err = o.orm.db.Query(sqlStr, ps...); err != nil {
-		queryErrorLog(err, "OpsForSelect.QueryPage", sqlStr, ps)
+		queryErrorLog(err, "OpsForSelect.Page", sqlStr, ps)
 		return
 	}
-	entities, err = ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(entity)])
+	es, err = ScanStruct(rows, o.orm.entity, entityComplete[getEntityPkgName(e)])
 	return
 }

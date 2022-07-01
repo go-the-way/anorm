@@ -28,7 +28,7 @@ func TestInsertExec(t *testing.T) {
 		Address: "wuhan",
 		Phone:   "13900110121",
 	}
-	if err := New(new(userEntity)).OpsForInsert().Ignore("ig").Exec(&user); err != nil {
+	if err := New(new(userEntity)).OpsForInsert().Ignore("ig").One(&user); err != nil {
 		t.Fatalf("TestInsertExec failed: %v\n", err)
 	}
 	if c := selectUserEntityCount(); c != 1 {
@@ -56,7 +56,7 @@ func TestInsertExecList(t *testing.T) {
 	user1 := userEntity{Name: "hugo1", Age: 20, Address: "wuhan", Phone: "13900110121"}
 	user2 := userEntity{Name: "hugo2", Age: 21, Address: "wuhan", Phone: "13900110122"}
 	user3 := userEntity{Name: "hugo3", Age: 22, Address: "wuhan", Phone: "13900110123"}
-	if err := New(new(userEntity)).OpsForInsert().ExecList(true, &user1, &user2, &user3); err != nil {
+	if err := New(new(userEntity)).OpsForInsert().List(true, &user1, &user2, &user3); err != nil {
 		t.Fatalf("TestInsertExecList failed: %v\n", err)
 	}
 	if c := selectUserEntityCount(); c != 3 {
@@ -68,10 +68,10 @@ func TestInsertExecListError(t *testing.T) {
 	user1 := insertExecError{Name: "hugo1"}
 	user2 := insertExecError{Name: "hugo1"}
 	user3 := insertExecError{Name: "hugo1"}
-	if err := New(new(insertExecError)).OpsForInsert().ExecList(false, &user1, &user2, &user3); err == nil {
+	if err := New(new(insertExecError)).OpsForInsert().List(false, &user1, &user2, &user3); err == nil {
 		t.Fatalf("TestInsertExecList failed: %v\n", err)
 	}
-	if c, _ := New(new(insertExecError)).OpsForSelectCount().Exec(nil); c != 1 {
+	if c, _ := New(new(insertExecError)).OpsForSelectCount().Count(nil); c != 1 {
 		t.Fatal("TestInsertExecList failed!")
 	}
 }
@@ -84,7 +84,7 @@ func TestInsertExecBatchError(t *testing.T) {
 	txm := NewTxManager()
 	o.BeginTx(txm)
 	_ = txm.Rollback()
-	if _, err := o.OpsForInsert().ExecBatch(&user1, &user2, &user3); err == nil {
+	if _, err := o.OpsForInsert().Batch(&user1, &user2, &user3); err == nil {
 		t.Fatalf("TestInsertExecList failed: %v\n", err)
 	}
 }
@@ -94,10 +94,10 @@ func TestInsertExecBatch(t *testing.T) {
 	user1 := userEntity{Name: "hugo1", Age: 20, Address: "wuhan", Phone: "13900110122"}
 	user2 := userEntity{Name: "hugo2", Age: 21, Address: "wuhan", Phone: "13900110122"}
 	user3 := userEntity{Name: "hugo3", Age: 22, Address: "wuhan", Phone: "13900110123"}
-	if c, err := New(new(userEntity)).OpsForInsert().ExecBatch(); !(err == nil && c == 0) {
+	if c, err := New(new(userEntity)).OpsForInsert().Batch(); !(err == nil && c == 0) {
 		t.Fatal("TestInsertExecBatch failed!")
 	}
-	if _, err := New(new(userEntity)).OpsForInsert().ExecBatch(&user1, &user2, &user3); err != nil {
+	if _, err := New(new(userEntity)).OpsForInsert().Batch(&user1, &user2, &user3); err != nil {
 		t.Fatalf("TestInsertExecBatch failed: %v\n", err)
 	}
 	if c := selectUserEntityCount(); c != 3 {
@@ -113,7 +113,7 @@ func TestInsertNullExec(t *testing.T) {
 		Address: NullString("wuhan"),
 		Phone:   NullString("13900110121"),
 	}
-	if err := New(new(userEntityNull)).OpsForInsert().Exec(&user); err != nil {
+	if err := New(new(userEntityNull)).OpsForInsert().One(&user); err != nil {
 		t.Fatalf("TestInsertNullExec failed: %v\n", err)
 	}
 	if c := selectUserEntityNullCount(); c != 1 {
@@ -141,7 +141,7 @@ func TestInsertNullExecList(t *testing.T) {
 		Address: NullString("wuhan"),
 		Phone:   NullString("13900110123"),
 	}
-	if err := New(new(userEntityNull)).OpsForInsert().ExecList(true, &user1, &user2, &user3); err != nil {
+	if err := New(new(userEntityNull)).OpsForInsert().List(true, &user1, &user2, &user3); err != nil {
 		t.Fatalf("TestInsertNullExecList failed: %v\n", err)
 	}
 	if c := selectUserEntityNullCount(); c != 3 {
@@ -169,7 +169,7 @@ func TestInsertNullExecBatch(t *testing.T) {
 		Address: NullString("wuhan"),
 		Phone:   NullString("13900110123"),
 	}
-	if _, err := New(new(userEntityNull)).OpsForInsert().ExecBatch(&user1, &user2, &user3); err != nil {
+	if _, err := New(new(userEntityNull)).OpsForInsert().Batch(&user1, &user2, &user3); err != nil {
 		t.Fatalf("TestInsertNullExecBatch failed: %v\n", err)
 	}
 	if c := selectUserEntityNullCount(); c != 3 {
@@ -181,7 +181,7 @@ func TestInsertUintPK(t *testing.T) {
 	truncateTestUintTable()
 	o := New(new(userUintEntity))
 	m := userUintEntity{Name: testName}
-	if err := o.OpsForInsert().Exec(&m); err != nil {
+	if err := o.OpsForInsert().One(&m); err != nil {
 		t.Fatalf("TestInsertUintPK failed: %v\n", err)
 	}
 	if m.ID == 0 {
@@ -198,7 +198,43 @@ func TestInsertError(t *testing.T) {
 		t.Fatalf("TestInsertError failed: %v\n", err)
 	}
 	_ = txm.Rollback()
-	if err := o.OpsForInsert().Exec(&m); err == nil {
+	if err := o.OpsForInsert().One(&m); err == nil {
 		t.Fatal("TestInsertError failed")
+	}
+}
+
+type testInsertE struct{ ID int }
+
+func (t *testInsertE) Configure(*EC) {}
+
+func TestInsert(t *testing.T) {
+	Register(new(testInsertE))
+	d := Insert(new(testInsertE))
+	if d == nil {
+		t.Fatal("test failed")
+	}
+}
+
+type testInsertWithDsE struct{ ID int }
+
+func (t *testInsertWithDsE) Configure(*EC) {}
+
+func TestInsertWithDs(t *testing.T) {
+	Register(new(testInsertWithDsE))
+	d := InsertWithDs(new(testInsertWithDsE), "_")
+	if d == nil {
+		t.Fatal("test failed")
+	}
+}
+
+type testInsertBeginTxE struct{ ID int }
+
+func (t *testInsertBeginTxE) Configure(*EC) {}
+
+func TestInsertBeginTx(t *testing.T) {
+	Register(new(testInsertBeginTxE))
+	d := Insert(new(testInsertBeginTxE))
+	if err := d.BeginTx(NewTxManager()); err != nil {
+		t.Fatal("test failed!")
 	}
 }

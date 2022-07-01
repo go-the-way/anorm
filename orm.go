@@ -32,19 +32,20 @@ var (
 	errAlreadyBindTxManager = errors.New("anorm: already bind tx manager")
 )
 
-type Orm[E Entity] struct {
-	mu *sync.Mutex
-
-	entity E
-
-	tagMap map[string]*tag
-
-	db     *sql.DB
-	tx     *sql.Tx
-	openTx bool
-
-	txm *TxManager
-}
+type (
+	BeginTxOps interface {
+		BeginTx(txm *TxManager, options ...sql.TxOptions) error
+	}
+	Orm[E Entity] struct {
+		mu     *sync.Mutex
+		entity E
+		db     *sql.DB
+		openTx bool
+		tx     *sql.Tx
+		txm    *TxManager
+		tagMap map[string]*tag
+	}
+)
 
 // New defines return a new Orm from EntityConfigurator entity
 func New[E Entity](entity E) *Orm[E] {
@@ -167,27 +168,27 @@ func (o *Orm[E]) getRealVal(value reflect.Value) (val any) {
 }
 
 // OpsForSelect defines return *selectOperation
-func (o *Orm[E]) OpsForSelect() *selectOperation[E] {
+func (o *Orm[E]) OpsForSelect() SelectOperation[E] {
 	return newSelectOperation(o)
 }
 
 // OpsForSelectCount defines return *selectCountOperation
-func (o *Orm[E]) OpsForSelectCount() *selectCountOperation[E] {
+func (o *Orm[E]) OpsForSelectCount() SelectCountOperation[E] {
 	return newSelectCountOperation(o)
 }
 
 // OpsForInsert defines return *insertOperation
-func (o *Orm[E]) OpsForInsert() *insertOperation[E] {
+func (o *Orm[E]) OpsForInsert() InsertOperation[E] {
 	return newInsertOperation(o)
 }
 
 // OpsForUpdate defines return *updateOperation
-func (o *Orm[E]) OpsForUpdate() *updateOperation[E] {
+func (o *Orm[E]) OpsForUpdate() UpdateOperation[E] {
 	return newUpdateOperation(o)
 }
 
 // OpsForDelete defines return *deleteOperation
-func (o *Orm[E]) OpsForDelete() *deleteOperation[E] {
+func (o *Orm[E]) OpsForDelete() DeleteOperation[E] {
 	return newsDeleteOperation(o)
 }
 

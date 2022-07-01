@@ -17,26 +17,48 @@ import (
 	"reflect"
 )
 
-type updateOperation[E Entity] struct {
-	orm           *Orm[E]
-	setColumns    []sg.C
-	ignoreColumns []sg.C
-	wheres        []sg.Ge
-	onlyWheres    []sg.Ge
+type (
+	UpdateOperation[E Entity] interface {
+		BeginTx(txm *TxManager, options ...*sql.TxOptions) error
+		Ignore(columns ...sg.C) UpdateOperation[E]
+		Set(columns ...sg.C) UpdateOperation[E]
+		IfWhere(cond bool, wheres ...sg.Ge) UpdateOperation[E]
+		IfOnlyWhere(cond bool, wheres ...sg.Ge) UpdateOperation[E]
+		Where(wheres ...sg.Ge) UpdateOperation[E]
+		OnlyWhere(wheres ...sg.Ge) UpdateOperation[E]
+		UpByPK(e E) (c int64, err error)
+	}
+	updateOperation[E Entity] struct {
+		orm                       *Orm[E]
+		setColumns, ignoreColumns []sg.C
+		wheres, onlyWheres        []sg.Ge
+	}
+)
+
+func Update[E Entity](e E) UpdateOperation[E] {
+	return New(e).OpsForUpdate()
+}
+
+func UpdateWithDs[E Entity](e E, ds string) UpdateOperation[E] {
+	return NewWithDS(e, ds).OpsForUpdate()
 }
 
 func newUpdateOperation[E Entity](o *Orm[E]) *updateOperation[E] {
 	return &updateOperation[E]{orm: o, ignoreColumns: make([]sg.C, 0), wheres: make([]sg.Ge, 0), onlyWheres: make([]sg.Ge, 0)}
 }
 
+func (o *updateOperation[E]) BeginTx(txm *TxManager, options ...*sql.TxOptions) error {
+	return o.orm.BeginTx(txm, options...)
+}
+
 // Ignore ignore columns for updates
-func (o *updateOperation[E]) Ignore(columns ...sg.C) *updateOperation[E] {
+func (o *updateOperation[E]) Ignore(columns ...sg.C) UpdateOperation[E] {
 	o.ignoreColumns = append(o.ignoreColumns, columns...)
 	return o
 }
 
 // Set if set only set columns
-func (o *updateOperation[E]) Set(columns ...sg.C) *updateOperation[E] {
+func (o *updateOperation[E]) Set(columns ...sg.C) UpdateOperation[E] {
 	o.setColumns = append(o.setColumns, columns...)
 	return o
 }
@@ -58,7 +80,7 @@ func (o *updateOperation[E]) getSetMap() map[string]struct{} {
 }
 
 // IfWhere if cond is true, append wheres
-func (o *updateOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *updateOperation[E] {
+func (o *updateOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) UpdateOperation[E] {
 	if cond {
 		return o.Where(wheres...)
 	}
@@ -66,7 +88,7 @@ func (o *updateOperation[E]) IfWhere(cond bool, wheres ...sg.Ge) *updateOperatio
 }
 
 // IfOnlyWhere if cond is true, append only wheres
-func (o *updateOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) *updateOperation[E] {
+func (o *updateOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) UpdateOperation[E] {
 	if cond {
 		return o.OnlyWhere(wheres...)
 	}
@@ -74,13 +96,13 @@ func (o *updateOperation[E]) IfOnlyWhere(cond bool, wheres ...sg.Ge) *updateOper
 }
 
 // Where append wheres
-func (o *updateOperation[E]) Where(wheres ...sg.Ge) *updateOperation[E] {
+func (o *updateOperation[E]) Where(wheres ...sg.Ge) UpdateOperation[E] {
 	o.wheres = append(o.wheres, wheres...)
 	return o
 }
 
 // OnlyWhere append only wheres
-func (o *updateOperation[E]) OnlyWhere(wheres ...sg.Ge) *updateOperation[E] {
+func (o *updateOperation[E]) OnlyWhere(wheres ...sg.Ge) UpdateOperation[E] {
 	o.onlyWheres = append(o.onlyWheres, wheres...)
 	return o
 }
@@ -129,11 +151,11 @@ func (o *updateOperation[E]) getUpdateBuilder(entity E) (string, []any) {
 	return builder.Set(setGes...).Where(sg.AndGroup(whereGes...)).Update(o.orm.table()).Build()
 }
 
-// Exec select for page
+// UpByPK select for page
 //
 // Params:
 //
-// - entity: the orm wrapper entity
+// - e: the orm wrapper entity
 //
 // Returns:
 //
@@ -141,18 +163,18 @@ func (o *updateOperation[E]) getUpdateBuilder(entity E) (string, []any) {
 //
 // - err: exec error
 //
-func (o *updateOperation[E]) Exec(entity E) (count int64, err error) {
+func (o *updateOperation[E]) UpByPK(e E) (c int64, err error) {
 	var result sql.Result
-	sqlStr, ps := o.getUpdateBuilder(entity)
-	queryLog("OpsForUpdate.Exec", sqlStr, ps)
+	sqlStr, ps := o.getUpdateBuilder(e)
+	queryLog("OpsForUpdate.UpByPK", sqlStr, ps)
 	if o.orm.openTx {
 		result, err = o.orm.tx.Exec(sqlStr, ps...)
 	} else {
 		result, err = o.orm.db.Exec(sqlStr, ps...)
 	}
-	queryErrorLog(err, "OpsForUpdate.Exec", sqlStr, ps)
+	queryErrorLog(err, "OpsForUpdate.UpByPK", sqlStr, ps)
 	if result != nil {
-		count, _ = result.RowsAffected()
+		c, _ = result.RowsAffected()
 	}
 	return
 }
